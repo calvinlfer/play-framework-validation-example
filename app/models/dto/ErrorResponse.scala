@@ -1,4 +1,4 @@
-package models
+package models.dto
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsPath, Json}

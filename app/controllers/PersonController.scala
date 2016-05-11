@@ -1,6 +1,6 @@
 package controllers
 
-import models.{ErrorResponse, Person}
+import models.dto.{CreatePerson, ErrorResponse}
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsPath, JsResult, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, Controller}
@@ -13,7 +13,7 @@ class PersonController extends Controller {
 
   def echo: Action[JsValue] = Action(parse.json) {
     implicit request =>
-      val eitherPerson = validateParsedResult(request.body.validate[Person])
+      val eitherPerson = validateParsedResult(request.body.validate[CreatePerson])
       eitherPerson.fold(
         errorResponse => BadRequest(Json.toJson(errorResponse)),
         person => Ok(Json.toJson(person))

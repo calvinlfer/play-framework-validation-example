@@ -1,5 +1,6 @@
-package models
+package models.domain
 
+import models.EnumerationHelpers
 import play.api.libs.json.{Reads, Writes}
 
 /**

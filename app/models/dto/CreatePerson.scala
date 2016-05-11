@@ -1,17 +1,14 @@
-package models
+package models.dto
 
-import models.Gender.Gender
+import models.domain.Gender.Gender
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class Person(firstName: String, lastName: String, studentId: String, gender: Gender)
+case class CreatePerson(firstName: String, lastName: String, studentId: String, gender: Gender)
 
-object Person {
-  // #EasyWayOut
-  // implicit val jsonFormat = Json.format[Person]
-
-  implicit val jsonWrites = Json.writes[Person]
+object CreatePerson {
+  implicit val jsonWrites = Json.writes[CreatePerson]
   implicit val jsonValidatedReads = (
     (JsPath \ "firstName").read[String]   //vanilla read followed by additional validators
       .filter(ValidationError("must be more than 2 characters"))(fname => fname.length > 2) and
@@ -25,5 +22,5 @@ object Person {
 
       (JsPath \ "gender").read[Gender]
 
-    ) (Person.apply _)
+    ) (CreatePerson.apply _)
 }

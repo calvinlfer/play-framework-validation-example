@@ -1,6 +1,7 @@
-import models.Gender.{Gender, Male}
-import models.Person
-import models.Person._
+import Gender.{Gender, Male}
+import models.CreatePerson$
+import models.domain.Gender
+import models.dto.CreatePerson
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.play._
 import play.api.libs.json.Json
@@ -24,7 +25,7 @@ class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   }
 
   test("Sending valid JSON to POST /persons responds with same valid JSON") {
-    val examplePerson = Person("Cal", "Fer", "0123456789", Male)
+    val examplePerson = CreatePerson("Cal", "Fer", "0123456789", Male)
     val Some(result) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
     status(result) mustEqual OK
     Helpers.contentType(result) mustEqual Some("application/json")
