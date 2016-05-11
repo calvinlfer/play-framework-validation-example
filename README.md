@@ -8,20 +8,20 @@ using hand-rolled methods without the use of in built helpers (see the *More Inf
 Controllers
 ===========
 
-- PersonController.scala:
+- **PersonController**:
 
   Shows how to handle JSON and perform better-than-average validation
 
 Models
 ======
 
-- Person
+- **Person**
 
   An example data class which has JSON converters defined in the companion object allowing serialization to JSON without
   additional validation and using Play framework Json.Reads filters
   See [here](http://stackoverflow.com/questions/26317186/custom-json-validation-constraints-in-play-framework-2-3-scala) for more information
 
-- ErrorResponse
+- **ErrorResponse**
 
   Another data class that has a Play framework Json.Writes defined to allow for easy serialization to JSON and is used
   to display error messages when `POST /person` is sent incorrect JSON
