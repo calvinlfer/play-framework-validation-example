@@ -32,7 +32,7 @@ object ErrorResponse {
     errors.foldLeft(Map.empty[String, String]) {
       // apply destructuring and then pattern match
       case (resultMap: Map[String, String], (jsPath: JsPath, validationErrors: Seq[ValidationError])) =>
-        val fieldWithError = jsPath.path.head.toString.drop(1)
+        val fieldWithError = jsPath.toString
         val errorData = fmtValidationErrors(validationErrors)
         resultMap + (fieldWithError -> errorData)
     }
