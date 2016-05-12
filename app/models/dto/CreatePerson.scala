@@ -10,7 +10,7 @@ case class CreatePerson(firstName: String, lastName: String, studentId: String, 
 object CreatePerson {
   implicit val jsonWrites = Json.writes[CreatePerson]
   implicit val jsonValidatedReads = (
-    (JsPath \ "firstName").read[String]   //vanilla read followed by additional validators
+    (JsPath \ "firstName").read[String] //vanilla read followed by additional validators
       .filter(ValidationError("must be more than 2 characters"))(fname => fname.length > 2) and
 
       (JsPath \ "lastName").read[String]

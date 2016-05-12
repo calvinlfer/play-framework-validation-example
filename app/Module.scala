@@ -1,6 +1,8 @@
 import com.google.inject.AbstractModule
 import java.time.Clock
 
+import services.data._
+
 /**
  * This class is a Guice module that tells Guice how to bind several
  * different types. This Guice module is created when the Play
@@ -16,6 +18,9 @@ class Module extends AbstractModule {
   override def configure() = {
     // Use the system clock as the default implementation of Clock
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
+
+    // Use the in-memory implementation for PersonsDAO
+    bind(classOf[PersonsDAO]).to(classOf[InMemoryPersonsDAO])
   }
 
 }
