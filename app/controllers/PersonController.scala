@@ -2,16 +2,15 @@ package controllers
 
 import java.util.UUID
 import javax.inject.Inject
-
 import com.google.inject.Singleton
-import models.domain.{Person, PersonDoesNotExist}
+import models.domain.Person
 import models.dto.ErrorResponse._
+import models.dto.UpdatePerson._
 import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsPath, JsResult, Json}
 import play.api.mvc.{Action, Controller, Result}
 import services.data.{CreateResult, DeleteResult, PersonsDAO, UpdateResult}
-import UpdatePerson._
 
 import scala.concurrent.Future
 
@@ -77,11 +76,10 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
       optPerson.fold(Future.successful(personDoesNotExistHttpResponse(personId)))(
         (person: Person) => {
           val updatedPerson = updateExistingPerson(update)(person)
-          val updateResult: Future[Either[PersonDoesNotExist, UpdateResult]] = persons.update(updatedPerson)
-          updateResult.map(
-            either =>
-              either.fold(_ => personDoesNotExistHttpResponse(personId),
-                updateResult => httpOkGivenUpdateResult(updateResult))
+          val futureEitherUpdateResult = persons.update(updatedPerson)
+          futureEitherUpdateResult.map(
+            // Remove Either wrapping safely
+            _.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenUpdateResult)
           )
         }
       )
