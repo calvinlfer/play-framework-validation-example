@@ -2,6 +2,7 @@ package controllers
 
 import java.util.UUID
 import javax.inject.Inject
+
 import com.google.inject.Singleton
 import models.domain.Person
 import models.dto.ErrorResponse._
@@ -55,6 +56,22 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
   private def personDoesNotExistHttpResponse(personId: UUID): Result =
     NotFound(Json toJson ErrorResponse("Does not Exist", Map("CouldNotFind" -> s"Person with (id: $personId) does not exist")))
 
+  private def updatePerson(personId: UUID)(update: UpdatePerson): Future[Result] = {
+    val futureOptPerson = persons.read(personId)
+    futureOptPerson.flatMap(optPerson =>
+      optPerson.fold(Future.successful(personDoesNotExistHttpResponse(personId)))(
+        person => {
+          val updatedPerson = updateExistingPerson(update)(person)
+          val futureEitherUpdateResult = persons.update(updatedPerson)
+          futureEitherUpdateResult.map(
+            // Remove Either wrapping safely
+            _.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenUpdateResult)
+          )
+        }
+      )
+    )
+  }
+
   def create = Action.async(parse.json) {
     implicit request =>
       val createPersonRequest = validateParsedResult(request.body.validate[CreatePerson])
@@ -68,22 +85,6 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
           .map(person => Ok(Json.toJson(person)))
           .getOrElse(personDoesNotExistHttpResponse(personId))
       )
-  }
-
-  private def updatePerson(personId: UUID)(update: UpdatePerson): Future[Result] = {
-    val futureOptPerson: Future[Option[Person]] = persons.read(personId)
-    futureOptPerson.flatMap(optPerson =>
-      optPerson.fold(Future.successful(personDoesNotExistHttpResponse(personId)))(
-        (person: Person) => {
-          val updatedPerson = updateExistingPerson(update)(person)
-          val futureEitherUpdateResult = persons.update(updatedPerson)
-          futureEitherUpdateResult.map(
-            // Remove Either wrapping safely
-            _.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenUpdateResult)
-          )
-        }
-      )
-    )
   }
 
   def update(personId: UUID) = Action.async(parse.json) {
