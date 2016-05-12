@@ -1,6 +1,7 @@
 import com.google.inject.AbstractModule
 import java.time.Clock
 
+import play.api.{Configuration, Environment}
 import services.data._
 
 /**
@@ -13,7 +14,7 @@ import services.data._
  * adding `play.modules.enabled` settings to the `application.conf`
  * configuration file.
  */
-class Module extends AbstractModule {
+class Module(environment: Environment, configuration: Configuration) extends AbstractModule {
 
   override def configure() = {
     // Use the system clock as the default implementation of Clock
