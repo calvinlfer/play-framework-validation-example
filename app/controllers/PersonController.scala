@@ -56,15 +56,30 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
   private def personDoesNotExistHttpResponse(personId: UUID): Result =
     NotFound(Json toJson ErrorResponse("Does not Exist", Map("CouldNotFind" -> s"Person with (id: $personId) does not exist")))
 
+  /**
+    * Helper method that performs the update and forms an appropriate Future[Result]
+    * @param personId the id of the person to be updated
+    * @param update the update request which contains the new updated data
+    * @return a Play-friendly Http Response in the Future
+    *
+    * Type Algebra:
+    * UUID -> UpdatePerson -> Future Result
+    */
   private def updatePerson(personId: UUID)(update: UpdatePerson): Future[Result] = {
     val futureOptPerson = persons.read(personId)
+    // Type Algebra: Future Option Person -> Future Result
     futureOptPerson.flatMap(optPerson =>
+      // Remove Option wrapping safely and return a Future (needed because we use flatMap above and the DAO update
+      // returns a Future as well so this needs to be sequenced
+      // Type Algebra: Option Person -> Future Result
       optPerson.fold(Future.successful(personDoesNotExistHttpResponse(personId)))(
         person => {
           val updatedPerson = updateExistingPerson(update)(person)
           val futureEitherUpdateResult = persons.update(updatedPerson)
+          // Type Algebra: Future Either (PersonNotFound, UpdateResult) -> Future Result
           futureEitherUpdateResult.map(
             // Remove Either wrapping safely
+            // Type Algebra: Either (PersonNotFound, UpdateResult) -> Result
             _.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenUpdateResult)
           )
         }
