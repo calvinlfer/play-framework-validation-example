@@ -8,6 +8,7 @@ import models.domain.Person
 import models.dto.ErrorResponse._
 import models.dto.UpdatePerson._
 import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
+import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsPath, JsResult, Json}
 import play.api.mvc.{Action, Controller, Result}
@@ -17,6 +18,7 @@ import scala.concurrent.Future
 
 @Singleton
 class PersonController @Inject()(persons: PersonsDAO) extends Controller {
+  private val log = Logger(this.getClass)
 
   private implicit val ec = play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -89,11 +91,13 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
 
   def create = Action.async(parse.json) {
     implicit request =>
+      log.debug("POST /persons")
       val createPersonRequest = validateParsedResult(request.body.validate[CreatePerson])
       createPersonRequest.fold(asyncHttpBadRequestGivenErrorResponse, persistPersonSendHttpResponse)
   }
 
   def read(personId: UUID) = Action.async {
+    log.debug(s"GET /persons/$personId")
     persons.read(personId)
       .map(optPerson =>
         optPerson
@@ -104,14 +108,19 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
 
   def update(personId: UUID) = Action.async(parse.json) {
     implicit request =>
+      log.debug(s"PUT /persons/$personId")
       val update = validateParsedResult(request.body.validate[UpdatePerson])
       update.fold(asyncHttpBadRequestGivenErrorResponse, updatePerson(personId))
   }
 
   def delete(personId: UUID) = Action.async {
+    log.debug(s"DELETE /persons/$personId")
     persons.delete(personId)
       .map(_.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenDeleteResult))
   }
 
-  def readAll = Action.async(persons.all.map(results => Ok(Json.toJson(results))))
+  def readAll = Action.async {
+    log.debug(s"GET /persons")
+    persons.all.map(results => Ok(Json.toJson(results)))
+  }
 }
