@@ -1,6 +1,7 @@
-import Gender.{Gender, Male}
-import models.CreatePerson$
-import models.domain.Gender
+import java.util.UUID
+
+import models.domain.Gender.Gender
+import models.domain.Gender._
 import models.dto.CreatePerson
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.play._
@@ -16,24 +17,78 @@ import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
   */
 class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   implicit val ec = globalExecutionContext
-  test("GET /persons/1234 responds with 1234") {
-    val Some(result) = route(app, FakeRequest(GET, "/persons/1234"))
-    status(result) mustEqual OK
-    contentType(result) mustEqual Some("text/plain")
-    charset(result) mustEqual Some("utf-8")
-    contentAsString(result) must include("1234")
-  }
+  val examplePerson = CreatePerson("Cal", "Fer", "0123456789", Male)
 
   test("Sending valid JSON to POST /persons responds with same valid JSON") {
-    val examplePerson = CreatePerson("Cal", "Fer", "0123456789", Male)
     val Some(result) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
-    status(result) mustEqual OK
-    Helpers.contentType(result) mustEqual Some("application/json")
+    status(result) mustEqual CREATED
+    contentType(result) mustEqual Some("application/json")
 
     val responseNode = Json.parse(contentAsString(result))
-    (responseNode \ "firstName").as[String] mustEqual "Cal"
-    (responseNode \ "lastName").as[String] mustEqual "Fer"
-    (responseNode \ "studentId").as[String] mustEqual "0123456789"
-    (responseNode \ "gender").as[Gender] mustEqual Male
+    // Throws exception if it is not
+    UUID fromString (responseNode \ "id").as[String]
+  }
+
+  test("POST /persons with valid json followed by GET /persons/{returned UUID from POST} returns a Person in JSON") {
+    val Some(postResult) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
+    val postResponseNode = Json.parse(contentAsString(postResult))
+    val uuid: UUID = (postResponseNode \ "id").as[UUID]
+
+    val Some(getResult) = route(app, FakeRequest(GET, s"/persons/$uuid"))
+    status(getResult) mustEqual OK
+    contentType(getResult) mustEqual Some("application/json")
+
+    val getResponseNode = Json.parse(contentAsString(getResult))
+    (getResponseNode \ "firstName").as[String] mustEqual examplePerson.firstName
+    (getResponseNode \ "lastName").as[String] mustEqual examplePerson.lastName
+    (getResponseNode \ "studentId").as[String] mustEqual examplePerson.studentId
+    (getResponseNode \ "gender").as[Gender] mustEqual examplePerson.gender
+  }
+
+  test("POST /persons with valid json followed by GET /persons returns a List of 1 Person in JSON") {
+    val Some(postResult) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
+    val Some(getResult) = route(app, FakeRequest(GET, s"/persons"))
+    status(getResult) mustEqual OK
+    contentType(getResult) mustEqual Some("application/json")
+
+    val getPersonsAsNode = Json.parse(contentAsString(getResult))
+    val getFirstPerson = getPersonsAsNode(0)
+    (getFirstPerson \ "firstName").as[String] mustEqual examplePerson.firstName
+    (getFirstPerson \ "lastName").as[String] mustEqual examplePerson.lastName
+    (getFirstPerson \ "studentId").as[String] mustEqual examplePerson.studentId
+    (getFirstPerson \ "gender").as[Gender] mustEqual examplePerson.gender
+  }
+
+  test("POST /persons with valid json followed by DELETE /persons/{returned UUID from POST} deletes a Person") {
+    val Some(postResult) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
+    val postResponseNode = Json.parse(contentAsString(postResult))
+    val uuid: UUID = (postResponseNode \ "id").as[UUID]
+
+    val Some(deleteResult) = route(app, FakeRequest(DELETE, s"/persons/$uuid"))
+    status(deleteResult) mustEqual OK
+    contentType(deleteResult) mustEqual Some("application/json")
+    val responseNode = Json.parse(contentAsString(deleteResult))
+    (responseNode \ "status").as[String] mustEqual "Deleted"
+  }
+
+  test("POST /persons with valid json followed by UPDATE /persons/{returned UUID from POST} updates a Person") {
+    val Some(postResult) = route(app, FakeRequest(POST, "/persons").withJsonBody(Json.toJson(examplePerson)))
+    val postResponseNode = Json.parse(contentAsString(postResult))
+    val uuid: UUID = (postResponseNode \ "id").as[UUID]
+
+    val Some(updateResult) = route(app, FakeRequest(PUT, s"/persons/$uuid").withJsonBody(Json.toJson(examplePerson.copy(firstName = "calvin"))))
+    status(updateResult) mustEqual OK
+    contentType(updateResult) mustEqual Some("application/json")
+    val responseNode = Json.parse(contentAsString(updateResult))
+    (responseNode \ "status").as[String] mustEqual "Updated"
+
+    val Some(getResult) = route(app, FakeRequest(GET, s"/persons/$uuid"))
+    status(getResult) mustEqual OK
+    contentType(getResult) mustEqual Some("application/json")
+    val getResponseNode = Json.parse(contentAsString(getResult))
+    (getResponseNode \ "firstName").as[String] mustEqual "calvin"
+    (getResponseNode \ "lastName").as[String] mustEqual examplePerson.lastName
+    (getResponseNode \ "studentId").as[String] mustEqual examplePerson.studentId
+    (getResponseNode \ "gender").as[Gender] mustEqual examplePerson.gender
   }
 }
