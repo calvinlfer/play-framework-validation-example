@@ -12,12 +12,12 @@ import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{JsPath, JsResult, Json}
 import play.api.mvc.{Action, Controller, Result}
-import services.data.{CreateResult, DeleteResult, PersonsDAO, UpdateResult}
+import services.data.{CreateResult, DeleteResult, PersonsRepository, UpdateResult}
 
 import scala.concurrent.Future
 
 @Singleton
-class PersonController @Inject()(persons: PersonsDAO) extends Controller {
+class PersonController @Inject()(persons: PersonsRepository) extends Controller {
   private val log = Logger(this.getClass)
 
   private implicit val ec = play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -41,13 +41,13 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
     BadRequest(Json toJson ErrorResponse(code = exception.getMessage, errors = Map.empty))
 
   private def httpCreatedGivenCreateResult(createResult: CreateResult) =
-    Created(Json.toJson(Map[String, String]("status" -> createResult.message, "id" -> createResult.id.toString)))
+    Created(Json.toJson(createResult.person))
 
   private def httpOkGivenUpdateResult(updateResult: UpdateResult) =
-    Ok(Json.toJson(Map[String, String]("status" -> updateResult.message)))
+    Ok(Json.toJson(updateResult.person))
 
   private def httpOkGivenDeleteResult(deleteResult: DeleteResult) =
-    Ok(Json.toJson(Map[String, String]("status" -> deleteResult.message)))
+    Ok(Json.toJson(Map[String, String]("removedId" -> deleteResult.deletedId.toString)))
 
   private def persistPersonSendHttpResponse(request: CreatePerson): Future[Result] = {
     val person = createPerson(request)
@@ -60,6 +60,7 @@ class PersonController @Inject()(persons: PersonsDAO) extends Controller {
 
   /**
     * Helper method that performs the update and forms an appropriate Future[Result]
+    *
     * @param personId the id of the person to be updated
     * @param update the update request which contains the new updated data
     * @return a Play-friendly Http Response in the Future

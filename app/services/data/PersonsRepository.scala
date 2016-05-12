@@ -6,13 +6,11 @@ import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
 
 import scala.concurrent.Future
 
-case class CreateResult(id: UUID, message: String = "Created")
+case class CreateResult(person: Person)
+case class UpdateResult(person: Person)
+case class DeleteResult(deletedId: UUID)
 
-case class UpdateResult(message: String = "Updated")
-
-case class DeleteResult(message: String = "Deleted")
-
-trait PersonsDAO {
+trait PersonsRepository {
   def create(person: Person): Future[Either[PersonAlreadyExists, CreateResult]]
 
   def read(personId: UUID): Future[Option[Person]]

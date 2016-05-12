@@ -20,7 +20,7 @@ class Module extends AbstractModule {
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
 
     // Use the in-memory implementation for PersonsDAO
-    bind(classOf[PersonsDAO]).to(classOf[InMemoryPersonsDAO])
+    bind(classOf[PersonsRepository]).to(classOf[InMemoryPersonsRepository]).asEagerSingleton()
   }
 
 }

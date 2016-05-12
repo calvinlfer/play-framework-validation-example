@@ -1,15 +1,13 @@
 package services.data
 
 import java.util.UUID
-import javax.inject.Singleton
 
 import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
 
 import scala.collection.parallel.mutable
 import scala.concurrent.Future
 
-@Singleton
-class InMemoryPersonsDAO extends PersonsDAO {
+class InMemoryPersonsRepository extends PersonsRepository {
   private val store = mutable.ParTrieMap.empty[UUID, Person]
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -20,7 +18,7 @@ class InMemoryPersonsDAO extends PersonsDAO {
       }
       else {
         store += (person.id -> person)
-        Right(CreateResult(person.id))
+        Right(CreateResult(person))
       }
     }
 
@@ -29,7 +27,7 @@ class InMemoryPersonsDAO extends PersonsDAO {
       store.get(person.id)
         .map(_ => {
           store += (person.id -> person)
-          Right(UpdateResult())
+          Right(UpdateResult(person))
         }).getOrElse(Left(PersonDoesNotExist()))
     }
 
@@ -39,7 +37,7 @@ class InMemoryPersonsDAO extends PersonsDAO {
     Future {
       store.get(personId).map(_ => {
         store remove personId
-        Right(DeleteResult())
+        Right(DeleteResult(personId))
       }).getOrElse(Left(PersonDoesNotExist()))
     }
 
