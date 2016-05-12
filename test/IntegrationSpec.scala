@@ -25,7 +25,10 @@ class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
     contentType(result) mustEqual Some("application/json")
 
     val responseNode = Json.parse(contentAsString(result))
-    println(responseNode)
+    (responseNode \ "firstName").as[String] mustEqual examplePerson.firstName
+    (responseNode \ "lastName").as[String] mustEqual examplePerson.lastName
+    (responseNode \ "studentId").as[String] mustEqual examplePerson.studentId
+    (responseNode \ "gender").as[Gender] mustEqual examplePerson.gender
   }
 
   test("POST /persons with valid json followed by GET /persons/{returned UUID from POST} returns a Person in JSON") {

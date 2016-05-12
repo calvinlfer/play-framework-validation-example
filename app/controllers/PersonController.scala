@@ -4,7 +4,6 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.google.inject.Singleton
-import models.domain.Person
 import models.dto.ErrorResponse._
 import models.dto.UpdatePerson._
 import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
@@ -31,9 +30,6 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
       (t: T) => Right(t)
     )
 
-  private def createPerson(request: CreatePerson): Person =
-    Person(UUID.randomUUID(), request.firstName, request.lastName, request.studentId, request.gender)
-
   private def asyncHttpBadRequestGivenErrorResponse(errorResponse: ErrorResponse): Future[Result] =
     Future.successful(BadRequest(Json toJson errorResponse))
 
@@ -50,7 +46,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
     Ok(Json.toJson(Map[String, String]("removedId" -> deleteResult.deletedId.toString)))
 
   private def persistPersonSendHttpResponse(request: CreatePerson): Future[Result] = {
-    val person = createPerson(request)
+    val person = request.toPerson
     val dataResult = persons.create(person)
     dataResult.map(_.fold(httpBadRequestGivenException, httpCreatedGivenCreateResult))
   }
@@ -62,11 +58,11 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
     * Helper method that performs the update and forms an appropriate Future[Result]
     *
     * @param personId the id of the person to be updated
-    * @param update the update request which contains the new updated data
+    * @param update   the update request which contains the new updated data
     * @return a Play-friendly Http Response in the Future
     *
-    * Type Algebra:
-    * UUID -> UpdatePerson -> Future Result
+    *         Type Algebra:
+    *         UUID -> UpdatePerson -> Future Result
     */
   private def updatePerson(personId: UUID)(update: UpdatePerson): Future[Result] = {
     val futureOptPerson = persons.read(personId)

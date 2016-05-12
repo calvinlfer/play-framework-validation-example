@@ -1,6 +1,9 @@
 package models.dto
 
+import java.util.UUID
+
 import models.domain.Gender.Gender
+import models.domain.Person
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -23,4 +26,9 @@ object CreatePerson {
       (JsPath \ "gender").read[Gender]
 
     ) (CreatePerson.apply _)
+
+  implicit class CreatePersonOps(request: CreatePerson) {
+    def toPerson: Person =
+      Person(UUID.randomUUID(), request.firstName, request.lastName, request.studentId, request.gender)
+  }
 }
