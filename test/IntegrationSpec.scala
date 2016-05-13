@@ -10,15 +10,15 @@ import play.api.inject.bind
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import services.data.{InMemoryPersonsRepository, PersonsRepository, TestPersonsRepository}
+import services.data.{DynamoDBPersonsRepository, InMemoryPersonsRepository, PersonsRepository}
 
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 
 class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   val application = new GuiceApplicationBuilder()
-    .disable[InMemoryPersonsRepository]
-    .overrides(bind[PersonsRepository].to[TestPersonsRepository])
+    .disable[DynamoDBPersonsRepository]
+    .overrides(bind[PersonsRepository].to[InMemoryPersonsRepository])
     .build
 
   implicit val ec = globalExecutionContext

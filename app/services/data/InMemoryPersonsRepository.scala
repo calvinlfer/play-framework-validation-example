@@ -2,7 +2,7 @@ package services.data
 
 import java.util.UUID
 
-import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
+import models.domain.Person
 
 import scala.collection.parallel.mutable
 import scala.concurrent.Future

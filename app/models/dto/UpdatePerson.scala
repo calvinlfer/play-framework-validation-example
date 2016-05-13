@@ -1,7 +1,7 @@
 package models.dto
 
-import models.domain.Gender._
-import models.domain.Person
+import models.dto.Gender._
+import models.domain.{Person => PersonModel}
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json}
@@ -25,11 +25,13 @@ object UpdatePerson {
 
     ) (UpdatePerson.apply _)
 
-  def updateExistingPerson(update: UpdatePerson)(person: Person): Person =
-    person.copy(
-      id = person.id,
-      firstName = update.firstName.getOrElse(person.firstName),
-      lastName = update.lastName.getOrElse(person.lastName),
-      gender = update.gender.getOrElse(person.gender)
-    )
+  implicit class UpdatePersonOps(person: UpdatePerson) {
+    def toModel(source: PersonModel): PersonModel =
+      source.copy(
+        firstName = person.firstName.getOrElse(source.firstName),
+        lastName = person.lastName.getOrElse(source.lastName),
+        studentId = person.studentId.getOrElse(source.studentId),
+        gender = person.gender.map(_.toModel).getOrElse(source.gender)
+      )
+  }
 }
