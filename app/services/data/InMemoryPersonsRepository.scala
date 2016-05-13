@@ -24,6 +24,10 @@ class InMemoryPersonsRepository @Inject() (@Named("DynamoClient") client: Amazon
   val tables = client.listTables(10)
   println(tables)
 
+  case class Farmer(customerId: String, animals: List[String])
+  val putResult = Scanamo.put(client)("customers")(Farmer("Ol Mcdonald", List("sheep", "cow")))
+  println(putResult)
+
   override def create(person: Person): Future[Either[PersonAlreadyExists, CreateResult]] =
     Future {
       if (store.get(person.id).isDefined) {
