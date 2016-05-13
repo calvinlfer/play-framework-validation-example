@@ -1,15 +1,28 @@
 package services.data
 
 import java.util.UUID
+import javax.inject.{Inject, Named}
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.dynamodbv2.model._
 import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
 
 import scala.collection.parallel.mutable
 import scala.concurrent.Future
 
-class InMemoryPersonsRepository extends PersonsRepository {
+class InMemoryPersonsRepository @Inject() (@Named("DynamoClient") client: AmazonDynamoDBClient) extends PersonsRepository {
   private val store = mutable.ParTrieMap.empty[UUID, Person]
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
+
+  import com.gu.scanamo._
+  import com.gu.scanamo.syntax._
+//  val createTableRequest = new CreateTableRequest().withTableName("customers")
+//  createTableRequest.withKeySchema(new KeySchemaElement().withAttributeName("customerId").withKeyType(KeyType.HASH))
+//  createTableRequest.withAttributeDefinitions(new AttributeDefinition().withAttributeName("customerId").withAttributeType(ScalarAttributeType.S))
+//  createTableRequest.setProvisionedThroughput(new ProvisionedThroughput(1000L, 1000L))
+//  client.createTable(createTableRequest)
+  val tables = client.listTables(10)
+  println(tables)
 
   override def create(person: Person): Future[Either[PersonAlreadyExists, CreateResult]] =
     Future {

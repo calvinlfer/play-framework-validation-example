@@ -1,7 +1,14 @@
-import com.google.inject.AbstractModule
-import java.time.Clock
+import java.io.{File, PrintWriter}
 
-import play.api.{Configuration, Environment}
+import com.google.inject.{AbstractModule, Inject, Provider}
+import java.time.Clock
+import javax.inject.{Named, Singleton}
+
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.regions.Regions
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.google.inject.name.Names
+import play.api.{Configuration, Environment, Logger}
 import services.data._
 
 /**
@@ -22,6 +29,35 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
 
     // Use the in-memory implementation for PersonsDAO
     bind(classOf[PersonsRepository]).to(classOf[InMemoryPersonsRepository]).asEagerSingleton()
+    bind(classOf[AmazonDynamoDBClient])
+      .annotatedWith(Names.named("DynamoClient"))
+      .toProvider(classOf[DynamoDBClientProvider])
+      .asEagerSingleton()
   }
+}
 
+@Singleton
+@Named("DynamoClient")
+class DynamoDBClientProvider @Inject() (configuration: Configuration) extends Provider[AmazonDynamoDBClient] {
+  val log = Logger("DynamoDB configuration")
+  override def get(): AmazonDynamoDBClient = {
+    val region = configuration.getString("dynamodb.region").map(r => Regions.fromName(r)).getOrElse(Regions.US_WEST_1)
+    val endpoint = configuration.getString("dynamodb.endpoint")
+    val accessKey = configuration.getString("dynamodb.aws-access-key-id")
+    val secretKey = configuration.getString("dynamodb.aws-secret-access-key")
+    val dynamoClient =
+      if (accessKey.isDefined && secretKey.isDefined) {
+        new AmazonDynamoDBClient(new BasicAWSCredentials(accessKey.get, secretKey.get))
+      }
+      else {
+        new AmazonDynamoDBClient()
+      }
+    dynamoClient.withRegion(region)
+    if (endpoint.isDefined) dynamoClient.withEndpoint(endpoint.get)
+
+    log.error("DynamoDB client configured with:")
+    log.error(s"Region: $region Endpoint: $endpoint AccessKey: $accessKey SecretKey: $secretKey")
+
+    dynamoClient
+  }
 }
