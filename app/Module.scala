@@ -1,10 +1,8 @@
 import java.time.Clock
-import javax.inject.{Named, Singleton}
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
-import com.google.inject.name.Names
 import com.google.inject.{AbstractModule, Inject, Provider}
 import play.api.{Configuration, Environment, Logger}
 import services.data._
