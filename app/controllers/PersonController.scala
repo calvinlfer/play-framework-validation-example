@@ -88,13 +88,13 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   def create = Action.async(parse.json) {
     implicit request =>
-      log.debug("POST /persons")
+      log.info("POST /persons")
       val createPersonRequest = validateParsedResult(request.body.validate[CreatePerson])
       createPersonRequest.fold(asyncHttpBadRequestGivenErrorResponse, persistPersonSendHttpResponse)
   }
 
   def read(personId: UUID) = Action.async {
-    log.debug(s"GET /persons/$personId")
+    log.info(s"GET /persons/$personId")
     persons.read(personId)
       .map(optPerson =>
         optPerson
@@ -105,19 +105,19 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   def update(personId: UUID) = Action.async(parse.json) {
     implicit request =>
-      log.debug(s"PUT /persons/$personId")
+      log.info(s"PUT /persons/$personId")
       val update = validateParsedResult(request.body.validate[UpdatePerson])
       update.fold(asyncHttpBadRequestGivenErrorResponse, updatePerson(personId))
   }
 
   def delete(personId: UUID) = Action.async {
-    log.debug(s"DELETE /persons/$personId")
+    log.info(s"DELETE /persons/$personId")
     persons.delete(personId)
       .map(_.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenDeleteResult))
   }
 
   def readAll = Action.async {
-    log.debug(s"GET /persons")
+    log.info(s"GET /persons")
     persons.all.map(results => Ok(Json.toJson(results)))
   }
 }

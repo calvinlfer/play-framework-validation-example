@@ -25,39 +25,39 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     // Use the system clock as the default implementation of Clock
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
 
-    // Use our configured Dynamo client if someone injects @Named("DynamoClient)
-    bind(classOf[AmazonDynamoDBClient])
-      .annotatedWith(Names.named("DynamoClient"))
-      .toProvider(classOf[DynamoDBClientProvider])
-      .asEagerSingleton()
+    bind(classOf[AmazonDynamoDBClient]).toProvider(classOf[DynamoDBClientProvider]).asEagerSingleton()
 
     // Use the in-memory implementation for PersonsDAO
     bind(classOf[PersonsRepository]).to(classOf[InMemoryPersonsRepository]).asEagerSingleton()
   }
 }
 
-@Singleton
-@Named("DynamoClient")
 class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Provider[AmazonDynamoDBClient] {
   val log = Logger("DynamoDB configuration")
 
   override def get(): AmazonDynamoDBClient = {
-    val region = configuration.getString("dynamodb.region").map(r => Regions.fromName(r)).getOrElse(Regions.US_WEST_1)
-    val endpoint = configuration.getString("dynamodb.endpoint")
-    val accessKey = configuration.getString("dynamodb.aws-access-key-id")
-    val secretKey = configuration.getString("dynamodb.aws-secret-access-key")
+    val optEndpoint = configuration.getString("dynamodb.endpoint")
+    val optAccessKey = configuration.getString("dynamodb.aws-access-key-id")
+    val optSecretKey = configuration.getString("dynamodb.aws-secret-access-key")
+    val optRegion = configuration.getString("dynamodb.region").map(r => Regions.fromName(r))
+
+    // Dear God, please forgive me for horrible mutation
     val dynamoClient =
-      if (accessKey.isDefined && secretKey.isDefined) {
-        new AmazonDynamoDBClient(new BasicAWSCredentials(accessKey.get, secretKey.get))
+      if (optAccessKey.isDefined && optSecretKey.isDefined) {
+        new AmazonDynamoDBClient(new BasicAWSCredentials(optAccessKey.get, optSecretKey.get))
       }
       else {
         new AmazonDynamoDBClient()
       }
-    dynamoClient.withRegion(region)
-    if (endpoint.isDefined) dynamoClient.withEndpoint(endpoint.get)
 
-    log.error("DynamoDB client configured with:")
-    log.error(s"Region: $region Endpoint: $endpoint AccessKey: $accessKey SecretKey: $secretKey")
+    if (optRegion.isDefined) dynamoClient.withRegion(optRegion.get)
+    if (optEndpoint.isDefined) dynamoClient.withEndpoint(optEndpoint.get)
+
+    log.info("DynamoDB client configured with:")
+    optRegion.foreach(region => log.info(s"AWS Region: ${region.toString.toLowerCase}"))
+    optEndpoint.foreach(endpoint => log.info(s"Endpoint: $endpoint"))
+    optAccessKey.foreach(_ => log.info("AWS Access Key ID has been provided"))
+    optSecretKey.foreach(_ => log.info("AWS Secret Access Key has been provided"))
 
     dynamoClient
   }

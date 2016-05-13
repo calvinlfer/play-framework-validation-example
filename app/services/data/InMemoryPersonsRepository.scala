@@ -10,7 +10,13 @@ import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
 import scala.collection.parallel.mutable
 import scala.concurrent.Future
 
-class InMemoryPersonsRepository @Inject() (@Named("DynamoClient") client: AmazonDynamoDBClient) extends PersonsRepository {
+/**
+  * Note that @Inject is required due to the fact that in order for Guice to work,
+  * classes must have either one (and only one) constructor annotated with @Inject
+  * or a zero-argument constructor that is not private
+  * @param client a fully configured Amazon DynamoDB client
+  */
+class InMemoryPersonsRepository @Inject() (client: AmazonDynamoDBClient) extends PersonsRepository {
   private val store = mutable.ParTrieMap.empty[UUID, Person]
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
