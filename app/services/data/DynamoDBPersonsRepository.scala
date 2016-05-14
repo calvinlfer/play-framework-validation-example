@@ -16,13 +16,13 @@ import scala.concurrent.Future
   * @param client a fully configured Amazon DynamoDB client
   */
 class DynamoDBPersonsRepository @Inject()(client: AmazonDynamoDBClient) extends PersonsRepository {
-  override def create(person: Person): Future[Either[RepositoryError, CreateResult]] = ???
+  override def create(person: Person): Future[Either[RepositoryError, Person]] = ???
 
-  override def update(person: Person): Future[Either[RepositoryError, UpdateResult]] = ???
+  override def update(person: Person): Future[Either[RepositoryError, Person]] = ???
 
   override def all: Future[Either[RepositoryError, Seq[Person]]] = ???
 
-  override def delete(personId: UUID): Future[Either[RepositoryError, DeleteResult]] = ???
+  override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] = ???
 
   override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = ???
 }

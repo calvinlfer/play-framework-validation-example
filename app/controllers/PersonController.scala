@@ -32,17 +32,17 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   private val ServiceError: Result = ServiceUnavailable(ErrorResponse("Service Error", Map.empty).toJson)
 
-  private def onCreateHandleSuccess[T](futureCreateResult: Future[Either[RepositoryError, CreateResult]])
-                                      (completeFn: CreateResult => Result): Future[Result] =
+  private def onCreateHandleSuccess[T](futureCreateResult: Future[Either[RepositoryError, PersonModel]])
+                                      (completeFn: PersonModel => Result): Future[Result] =
     futureCreateResult.map {
-      case Right(createResult) => completeFn(createResult)
+      case Right(createdPerson) => completeFn(createdPerson)
       case Left(_) => ServiceError
     }
 
-  private def onUpdateHandleSuccess[T](futureUpdateResult: Future[Either[RepositoryError, UpdateResult]])
-                                      (completeFn: UpdateResult => Result): Future[Result] =
+  private def onUpdateHandleSuccess[T](futureUpdateResult: Future[Either[RepositoryError, PersonModel]])
+                                      (completeFn: PersonModel => Result): Future[Result] =
     futureUpdateResult.map {
-      case Right(updateResult) => completeFn(updateResult)
+      case Right(updatedPerson) => completeFn(updatedPerson)
       case Left(_) => ServiceError
     }
 
@@ -54,16 +54,10 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
       case Left(_) => Future.successful(ServiceError)
     }
 
-  private def onDeleteHandleAll[T](futureDeleteResult: Future[Either[RepositoryError, DeleteResult]]): Future[Result] =
+  private def onDeleteHandleAll[T](futureDeleteResult: Future[Either[RepositoryError, UUID]]): Future[Result] =
     futureDeleteResult.map {
-      case Right(DeleteResult(SuccessfullyDeleted, uuid)) =>
-        Ok(Json toJson Map("id" -> uuid.toString))
-
-      case Right(DeleteResult(DoesNotExist, uuid)) =>
-        NotFound(ErrorResponse("Resource not found", Map("id" -> uuid.toString)).toJson)
-
-      case Left(_) =>
-        ServiceError
+      case Right(uuid) => Ok(Json toJson Map("id" -> uuid.toString))
+      case Left(_) => ServiceError
     }
 
   def create: Action[JsValue] = Action.async(parse.json) {
@@ -73,11 +67,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
         createPersonRequest => {
           val personModel: PersonModel = createPersonRequest.toModel
           onCreateHandleSuccess(persons.create(personModel)) {
-            case CreateResult(SuccessfullyCreated, Some(person)) =>
-              Created(person.toDTO.toJson)
-
-            case CreateResult(PersonAlreadyExists, None) =>
-              Conflict(ErrorResponse("Person already exists", Map.empty).toJson)
+            person => Created(person.toDTO.toJson)
           }
         }
       }
@@ -99,12 +89,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
             foundPerson => {
               val updatedPerson = updatePersonRequest.toModel(foundPerson)
               onUpdateHandleSuccess(persons.update(updatedPerson)) {
-                case UpdateResult(SuccessfullyUpdated, Some(updatedPersonReturned)) =>
-                  Ok(updatedPersonReturned.toDTO.toJson)
-                case UpdateResult(SuccessfullyUpdated, None) =>
-                  ServiceUnavailable(ErrorResponse("Your request was processed but we cannot show the result", Map.empty).toJson)
-                case UpdateResult(PersonDoesNotExist, _) =>
-                  Conflict(ErrorResponse(s"Person with ID: $personId does not exist", Map.empty).toJson)
+                updatedPerson => Ok(updatedPerson.toDTO.toJson)
               }
             }
           }
@@ -113,7 +98,9 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   def delete(personId: UUID): Action[AnyContent] = Action.async {
     log.info(s"DELETE /persons/$personId")
-    onDeleteHandleAll(persons.delete(personId))
+    onFindHandleSuccess(persons.find(personId)) {
+      person => onDeleteHandleAll(persons.delete(personId))
+    }
   }
 
   def readAll: Action[AnyContent] = Action.async {

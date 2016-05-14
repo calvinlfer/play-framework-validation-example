@@ -13,34 +13,24 @@ class InMemoryPersonsRepository extends PersonsRepository {
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
 
-  override def create(person: Person): Future[Either[RepositoryError, CreateResult]] =
+  override def create(person: Person): Future[Either[RepositoryError, Person]] =
     Future {
-      if (store.get(person.id).isDefined) {
-        Right(CreateResult(PersonAlreadyExists, optPerson = None))
-      }
-      else {
-        store += (person.id -> person)
-        Right(CreateResult(SuccessfullyCreated, optPerson = Some(person)))
-      }
+      store += (person.id -> person)
+      Right(person)
     }
 
-  override def update(person: Person): Future[Either[RepositoryError, UpdateResult]] =
+  override def update(person: Person): Future[Either[RepositoryError, Person]] =
     Future {
-      store.get(person.id)
-        .map(_ => {
-          store += (person.id -> person)
-          Right(UpdateResult(SuccessfullyUpdated, optPerson = Some(person)))
-        }).getOrElse(Right(UpdateResult(PersonDoesNotExist, optPerson = None)))
+      store += (person.id -> person)
+      Right(person)
     }
 
   override def all: Future[Either[RepositoryError, Seq[Person]]] = Future successful Right(store.values.toList)
 
-  override def delete(personId: UUID): Future[Either[RepositoryError, DeleteResult]] =
+  override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] =
     Future {
-      store.get(personId).map(_ => {
-        store remove personId
-        Right(DeleteResult(SuccessfullyDeleted, personId))
-      }).getOrElse(Right(DeleteResult(DoesNotExist, personId)))
+      store remove personId
+      Right(personId)
     }
 
   override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
