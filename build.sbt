@@ -21,3 +21,9 @@ lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 compileScalastyle := org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
 
 (compile in Compile) <<= (compile in Compile) dependsOn compileScalastyle
+
+coverageMinimum := 50
+
+coverageFailOnMinimum := true
+
+coverageExcludedPackages := "<empty>;Reverse.*;.*AuthService.*;models\\.data\\..*;router;router.*"
