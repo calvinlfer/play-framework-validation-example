@@ -1,7 +1,7 @@
 package models.dto
 
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{JsPath, Json}
+import play.api.libs.json.{JsPath, JsValue, Json}
 
 case class ErrorResponse(code: String, errors: Map[String, String])
 
@@ -36,4 +36,8 @@ object ErrorResponse {
         val errorData = fmtValidationErrors(validationErrors)
         resultMap + (fieldWithError -> errorData)
     }
+
+  implicit class ErrorResponseJsonOps(errorResponse: ErrorResponse) {
+    def toJson: JsValue = Json.toJson(errorResponse)
+  }
 }

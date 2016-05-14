@@ -2,8 +2,8 @@ package models.dto
 
 import java.util.UUID
 
-import models.domain.Gender.Gender
-import models.domain.Person
+import models.domain.{Person => PersonModel}
+import models.dto.Gender.Gender
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -28,7 +28,8 @@ object CreatePerson {
     ) (CreatePerson.apply _)
 
   implicit class CreatePersonOps(request: CreatePerson) {
-    def toPerson: Person =
-      Person(UUID.randomUUID(), request.firstName, request.lastName, request.studentId, request.gender)
+    def toModel: PersonModel =
+      PersonModel(UUID.randomUUID(), request.firstName, request.lastName, request.studentId, request.gender.toModel)
   }
+
 }

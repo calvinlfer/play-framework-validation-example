@@ -2,22 +2,39 @@ package services.data
 
 import java.util.UUID
 
-import models.domain.{Person, PersonAlreadyExists, PersonDoesNotExist}
+import models.domain.Person
 
 import scala.concurrent.Future
 
-case class CreateResult(person: Person)
-case class UpdateResult(person: Person)
-case class DeleteResult(deletedId: UUID)
+sealed trait RepositoryError
+case object ConnectionError
+
+sealed trait DeleteStatus
+case object SuccessfullyDeleted extends DeleteStatus
+// this can definitely be improved since it sort of overlaps with PersonDoesNotExist
+case object DoesNotExist extends DeleteStatus
+
+sealed trait CreateStatus
+case object SuccessfullyCreated extends CreateStatus
+case object PersonAlreadyExists extends CreateStatus
+
+sealed trait UpdateStatus
+case object SuccessfullyUpdated extends UpdateStatus
+case object PersonDoesNotExist extends UpdateStatus
+
+sealed trait RepositoryResult
+case class DeleteResult(status: DeleteStatus, id: UUID) extends RepositoryResult
+case class UpdateResult(status: UpdateStatus, optPerson: Option[Person]) extends RepositoryResult
+case class CreateResult(status: CreateStatus, optPerson: Option[Person]) extends RepositoryResult
 
 trait PersonsRepository {
-  def create(person: Person): Future[Either[PersonAlreadyExists, CreateResult]]
+  def create(person: Person): Future[Either[RepositoryError, CreateResult]]
 
-  def read(personId: UUID): Future[Option[Person]]
+  def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]]
 
-  def update(person: Person): Future[Either[PersonDoesNotExist, UpdateResult]]
+  def update(person: Person): Future[Either[RepositoryError, UpdateResult]]
 
-  def delete(personId: UUID): Future[Either[PersonDoesNotExist, DeleteResult]]
+  def delete(personId: UUID): Future[Either[RepositoryError, DeleteResult]]
 
-  def all: Future[Seq[Person]]
+  def all: Future[Either[RepositoryError, Seq[Person]]]
 }

@@ -4,14 +4,14 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.google.inject.Singleton
-import models.dto.ErrorResponse._
-import models.dto.UpdatePerson._
+import models.domain.{Person => PersonModel}
 import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
+import models.dto.ErrorResponse._
+import models.dto.Person._
 import play.api.Logger
-import play.api.data.validation.ValidationError
-import play.api.libs.json.{JsPath, JsResult, Json}
+import play.api.libs.json._
 import play.api.mvc.{Action, Controller, Result}
-import services.data.{CreateResult, DeleteResult, PersonsRepository, UpdateResult}
+import services.data._
 
 import scala.concurrent.Future
 
@@ -21,103 +21,113 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   private implicit val ec = play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  private def validateParsedResult[T](jsResult: JsResult[T]): Either[ErrorResponse, T] =
-    jsResult.fold(
-      (errors: Seq[(JsPath, Seq[ValidationError])]) => {
-        val map = fmtValidationResults(errors)
-        Left(ErrorResponse("Validation Error", map))
-      },
-      (t: T) => Right(t)
+  private def validateJsonBody[T](jsonBody: JsValue)(implicit reads: Reads[T]): Either[ErrorResponse, T] =
+    jsonBody.validate[T].asEither.fold(
+      errors  =>    Left(ErrorResponse("Validation Error", fmtValidationResults(errors))),
+      t       =>    Right(t)
     )
 
-  private def asyncHttpBadRequestGivenErrorResponse(errorResponse: ErrorResponse): Future[Result] =
-    Future.successful(BadRequest(Json toJson errorResponse))
+  private def onValidationHandleSuccess[T](jsonBody: JsValue)(successFn: T => Future[Result])
+                                    (implicit reads: Reads[T]): Future[Result] =
+    validateJsonBody(jsonBody).fold(errorResponse => Future.successful(BadRequest(errorResponse.toJson)), successFn)
 
-  private def httpBadRequestGivenException(exception: Exception) =
-    BadRequest(Json toJson ErrorResponse(code = exception.getMessage, errors = Map.empty))
+  private val ServiceError: Result = ServiceUnavailable(ErrorResponse("Service Error", Map.empty).toJson)
 
-  private def httpCreatedGivenCreateResult(createResult: CreateResult) =
-    Created(Json.toJson(createResult.person))
+  private def onCreateHandleSuccess[T](futureCreateResult: Future[Either[RepositoryError, CreateResult]])
+                                (completeFn: CreateResult => Result): Future[Result] =
+    futureCreateResult.map {
+      case Right(createResult) => completeFn(createResult)
+      case Left(_) => ServiceError
+    }
 
-  private def httpOkGivenUpdateResult(updateResult: UpdateResult) =
-    Ok(Json.toJson(updateResult.person))
+  private def onUpdateHandleSuccess[T](futureUpdateResult: Future[Either[RepositoryError, UpdateResult]])
+                                (completeFn: UpdateResult => Result): Future[Result] =
+    futureUpdateResult.map {
+      case Right(updateResult) => completeFn(updateResult)
+      case Left(_) => ServiceError
+    }
 
-  private def httpOkGivenDeleteResult(deleteResult: DeleteResult) =
-    Ok(Json.toJson(Map[String, String]("removedId" -> deleteResult.deletedId.toString)))
+  private def onFindHandleSuccess[T](futureFindResult: Future[Either[RepositoryError, Option[PersonModel]]])
+                              (completeFn: PersonModel => Future[Result]): Future[Result] =
+    futureFindResult.flatMap {
+      case Right(Some(person)) => completeFn(person)
+      case Right(None) => Future.successful(NotFound(ErrorResponse("Resource not found", Map.empty).toJson))
+      case Left(_) => Future.successful(ServiceError)
+    }
 
-  private def persistPersonSendHttpResponse(request: CreatePerson): Future[Result] = {
-    val person = request.toPerson
-    val dataResult = persons.create(person)
-    dataResult.map(_.fold(httpBadRequestGivenException, httpCreatedGivenCreateResult))
-  }
+  private def onDeleteHandleAll[T](futureDeleteResult: Future[Either[RepositoryError, DeleteResult]]): Future[Result] =
+    futureDeleteResult.map {
+      case Right(DeleteResult(SuccessfullyDeleted, uuid)) =>
+        Ok(Json toJson Map("id" -> uuid.toString))
 
-  private def personDoesNotExistHttpResponse(personId: UUID): Result =
-    NotFound(Json toJson ErrorResponse("Does not Exist", Map("CouldNotFind" -> s"Person with (id: $personId) does not exist")))
+      case Right(DeleteResult(DoesNotExist, uuid)) =>
+        NotFound(ErrorResponse("Resource not found", Map("id" -> uuid.toString)).toJson)
 
-  /**
-    * Helper method that performs the update and forms an appropriate Future[Result]
-    *
-    * @param personId the id of the person to be updated
-    * @param update   the update request which contains the new updated data
-    * @return a Play-friendly Http Response in the Future
-    *
-    *         Type Algebra:
-    *         UUID -> UpdatePerson -> Future Result
-    */
-  private def updatePerson(personId: UUID)(update: UpdatePerson): Future[Result] = {
-    val futureOptPerson = persons.read(personId)
-    // Type Algebra: Future Option Person -> Future Result
-    futureOptPerson.flatMap(optPerson =>
-      // Remove Option wrapping safely and return a Future (needed because we use flatMap above and the DAO update
-      // returns a Future as well so this needs to be sequenced
-      // Type Algebra: Option Person -> Future Result
-      optPerson.fold(Future.successful(personDoesNotExistHttpResponse(personId)))(
-        person => {
-          val updatedPerson = updateExistingPerson(update)(person)
-          val futureEitherUpdateResult = persons.update(updatedPerson)
-          // Type Algebra: Future Either (PersonNotFound, UpdateResult) -> Future Result
-          futureEitherUpdateResult.map(
-            // Remove Either wrapping safely
-            // Type Algebra: Either (PersonNotFound, UpdateResult) -> Result
-            _.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenUpdateResult)
-          )
-        }
-      )
-    )
-  }
+      case Left(_) =>
+        ServiceError
+    }
 
   def create = Action.async(parse.json) {
     implicit request =>
-      log.debug("POST /persons")
-      val createPersonRequest = validateParsedResult(request.body.validate[CreatePerson])
-      createPersonRequest.fold(asyncHttpBadRequestGivenErrorResponse, persistPersonSendHttpResponse)
+      log.info("POST /persons")
+      onValidationHandleSuccess[CreatePerson](request.body) {
+        createPersonRequest => {
+          val personModel: PersonModel = createPersonRequest.toModel
+          onCreateHandleSuccess(persons.create(personModel)) {
+            case CreateResult(SuccessfullyCreated, Some(person)) =>
+              Created(person.toDTO.toJson)
+
+            case CreateResult(PersonAlreadyExists, None) =>
+              Conflict(ErrorResponse("Person already exists", Map.empty).toJson)
+          }
+        }
+      }
   }
 
   def read(personId: UUID) = Action.async {
-    log.debug(s"GET /persons/$personId")
-    persons.read(personId)
-      .map(optPerson =>
-        optPerson
-          .map(person => Ok(Json.toJson(person)))
-          .getOrElse(personDoesNotExistHttpResponse(personId))
-      )
+    log.info(s"GET /persons/$personId")
+    onFindHandleSuccess(persons.find(personId)) {
+      person => Future.successful(Ok(person.toDTO.toJson))
+    }
   }
 
   def update(personId: UUID) = Action.async(parse.json) {
     implicit request =>
-      log.debug(s"PUT /persons/$personId")
-      val update = validateParsedResult(request.body.validate[UpdatePerson])
-      update.fold(asyncHttpBadRequestGivenErrorResponse, updatePerson(personId))
+      log.info(s"PUT /persons/$personId")
+      onValidationHandleSuccess[UpdatePerson](request.body) {
+        updatePersonRequest =>
+          onFindHandleSuccess(persons.find(personId)) {
+            foundPerson => {
+              val updatedPerson = updatePersonRequest.toModel(foundPerson)
+              onUpdateHandleSuccess(persons.update(updatedPerson)) {
+                case UpdateResult(SuccessfullyUpdated, Some(updatedPersonReturned)) =>
+                  Ok(updatedPersonReturned.toDTO.toJson)
+                case UpdateResult(SuccessfullyUpdated, None) =>
+                  ServiceUnavailable(ErrorResponse("Your request was processed but we cannot show the result", Map.empty).toJson)
+                case UpdateResult(PersonDoesNotExist, _) =>
+                  Conflict(ErrorResponse(s"Person with ID: $personId does not exist", Map.empty).toJson)
+              }
+            }
+          }
+      }
   }
 
   def delete(personId: UUID) = Action.async {
-    log.debug(s"DELETE /persons/$personId")
-    persons.delete(personId)
-      .map(_.fold(_ => personDoesNotExistHttpResponse(personId), httpOkGivenDeleteResult))
+    log.info(s"DELETE /persons/$personId")
+    onDeleteHandleAll(persons.delete(personId))
   }
 
   def readAll = Action.async {
-    log.debug(s"GET /persons")
-    persons.all.map(results => Ok(Json.toJson(results)))
+    log.info(s"GET /persons")
+    persons.all
+      .map {
+        either => either.fold(
+          _ => ServiceError,
+          persons => {
+            val jsonPersons = persons.map(eachPerson => eachPerson.toDTO.toJson)
+            Ok(JsArray(jsonPersons))
+          }
+        )
+      }
   }
 }
