@@ -20,7 +20,7 @@ import services.data._
   */
 class Module(environment: Environment, configuration: Configuration) extends AbstractModule {
 
-  override def configure() = {
+  override def configure(): Unit = {
     // Use the system clock as the default implementation of Clock
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
 
@@ -34,7 +34,7 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
 }
 
 class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Provider[AmazonDynamoDBClient] {
-  val log = Logger("DynamoDB configuration")
+  private val log = Logger("DynamoDB configuration")
 
   override def get(): AmazonDynamoDBClient = {
     val optEndpoint = configuration.getString("dynamodb.endpoint")

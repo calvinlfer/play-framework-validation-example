@@ -9,7 +9,7 @@ import models.dto.Person._
 import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
 import play.api.Logger
 import play.api.libs.json._
-import play.api.mvc.{Action, Controller, Result}
+import play.api.mvc.{Action, AnyContent, Controller, Result}
 import services.data._
 
 import scala.concurrent.Future
@@ -66,7 +66,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
         ServiceError
     }
 
-  def create = Action.async(parse.json) {
+  def create: Action[JsValue] = Action.async(parse.json) {
     implicit request =>
       log.info("POST /persons")
       onValidationHandleSuccess[CreatePerson](request.body) {
@@ -83,14 +83,14 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
       }
   }
 
-  def read(personId: UUID) = Action.async {
+  def read(personId: UUID): Action[AnyContent] = Action.async {
     log.info(s"GET /persons/$personId")
     onFindHandleSuccess(persons.find(personId)) {
       person => Future.successful(Ok(person.toDTO.toJson))
     }
   }
 
-  def update(personId: UUID) = Action.async(parse.json) {
+  def update(personId: UUID): Action[JsValue] = Action.async(parse.json) {
     implicit request =>
       log.info(s"PUT /persons/$personId")
       onValidationHandleSuccess[UpdatePerson](request.body) {
@@ -111,12 +111,12 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
       }
   }
 
-  def delete(personId: UUID) = Action.async {
+  def delete(personId: UUID): Action[AnyContent] = Action.async {
     log.info(s"DELETE /persons/$personId")
     onDeleteHandleAll(persons.delete(personId))
   }
 
-  def readAll = Action.async {
+  def readAll: Action[AnyContent] = Action.async {
     log.info(s"GET /persons")
     persons.all
       .map {
