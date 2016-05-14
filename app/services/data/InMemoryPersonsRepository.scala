@@ -13,38 +13,38 @@ class InMemoryPersonsRepository extends PersonsRepository {
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
 
-  override def create(person: Person): Future[Either[PersonAlreadyExists, CreateResult]] =
+  override def create(person: Person): Future[Either[RepositoryError, CreateResult]] =
     Future {
       if (store.get(person.id).isDefined) {
-        Left(PersonAlreadyExists())
+        Right(CreateResult(PersonAlreadyExists, optPerson = None))
       }
       else {
         store += (person.id -> person)
-        Right(CreateResult(person))
+        Right(CreateResult(SuccessfullyCreated, optPerson = Some(person)))
       }
     }
 
-  override def update(person: Person): Future[Either[PersonDoesNotExist, UpdateResult]] =
+  override def update(person: Person): Future[Either[RepositoryError, UpdateResult]] =
     Future {
       store.get(person.id)
         .map(_ => {
           store += (person.id -> person)
-          Right(UpdateResult(person))
-        }).getOrElse(Left(PersonDoesNotExist()))
+          Right(UpdateResult(SuccessfullyUpdated, optPerson = Some(person)))
+        }).getOrElse(Right(UpdateResult(PersonDoesNotExist, optPerson = None)))
     }
 
-  override def all: Future[Seq[Person]] = Future successful store.values.toList
+  override def all: Future[Either[RepositoryError, Seq[Person]]] = Future successful Right(store.values.toList)
 
-  override def delete(personId: UUID): Future[Either[PersonDoesNotExist, DeleteResult]] =
+  override def delete(personId: UUID): Future[Either[RepositoryError, DeleteResult]] =
     Future {
       store.get(personId).map(_ => {
         store remove personId
-        Right(DeleteResult(personId))
-      }).getOrElse(Left(PersonDoesNotExist()))
+        Right(DeleteResult(SuccessfullyDeleted, personId))
+      }).getOrElse(Right(DeleteResult(DoesNotExist, personId)))
     }
 
-  override def read(personId: UUID): Future[Option[Person]] =
+  override def read(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
     Future {
-      store.get(personId)
+      Right(store.get(personId))
     }
 }

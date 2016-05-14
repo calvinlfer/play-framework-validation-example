@@ -23,7 +23,7 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     // Use the system clock as the default implementation of Clock
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
 
-    bind(classOf[AmazonDynamoDBClient]).toProvider(classOf[DynamoDBClientProvider]).asEagerSingleton()
+    bind(classOf[AmazonDynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
 
     // Use the in-memory implementation for PersonsDAO
     bind(classOf[PersonsRepository]).to(classOf[InMemoryPersonsRepository]).asEagerSingleton()
