@@ -10,7 +10,9 @@ import play.api.inject.bind
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import services.data.{DynamoDBPersonsRepository, InMemoryPersonsRepository, PersonsRepository}
+import services.data.inmemory.InMemoryPersonsRepository
+import services.data.PersonsRepository
+import services.data.dynamodb.DynamoDBPersonsRepository
 
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 

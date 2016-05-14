@@ -1,10 +1,10 @@
-package services.data
+package services.data.dynamodb
 
 import java.util.UUID
 import javax.inject.Inject
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
-import models.domain.Person
+import models.domain.{Gender, Person}
+import services.data.{PersonsRepository, RepositoryError}
 
 import scala.concurrent.Future
 
@@ -15,8 +15,10 @@ import scala.concurrent.Future
   * or a zero-argument constructor that is not private
   * @param client a fully configured Amazon DynamoDB client
   */
-class DynamoDBPersonsRepository @Inject()(client: AmazonDynamoDBClient) extends PersonsRepository {
-  override def create(person: Person): Future[Either[RepositoryError, Person]] = ???
+class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends PersonsRepository {
+  override def create(person: Person): Future[Either[RepositoryError, Person]] = {
+    Future.successful(Right(Person(id = UUID.randomUUID(), "LOL", "BALL", "12345678910", Gender.Male)))
+  }
 
   override def update(person: Person): Future[Either[RepositoryError, Person]] = ???
 

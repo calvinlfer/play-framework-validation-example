@@ -7,6 +7,7 @@ import com.google.inject.{AbstractModule, Inject, Provider}
 import controllers.PersonController
 import play.api.{Configuration, Environment, Logger}
 import services.data._
+import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository}
 
 /**
   * This class is a Guice module that tells Guice how to bind several
@@ -26,40 +27,9 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
 
     bind(classOf[PersonController])
 
-    bind(classOf[AmazonDynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
+    bind(classOf[DynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
 
-    // Use the in-memory implementation for PersonsDAO
-    bind(classOf[PersonsRepository]).to(classOf[InMemoryPersonsRepository]).asEagerSingleton()
+    bind(classOf[PersonsRepository]).to(classOf[DynamoDBPersonsRepository]).asEagerSingleton()
   }
 }
 
-class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Provider[AmazonDynamoDBClient] {
-  private val log = Logger("DynamoDB configuration")
-
-  override def get(): AmazonDynamoDBClient = {
-    val optEndpoint = configuration.getString("dynamodb.endpoint")
-    val optAccessKey = configuration.getString("dynamodb.aws-access-key-id")
-    val optSecretKey = configuration.getString("dynamodb.aws-secret-access-key")
-    val optRegion = configuration.getString("dynamodb.region").map(r => Regions.fromName(r))
-
-    // Dear God, please forgive me for horrible mutation
-    val dynamoClient =
-      if (optAccessKey.isDefined && optSecretKey.isDefined) {
-        new AmazonDynamoDBClient(new BasicAWSCredentials(optAccessKey.get, optSecretKey.get))
-      }
-      else {
-        new AmazonDynamoDBClient()
-      }
-
-    if (optRegion.isDefined) dynamoClient.withRegion(optRegion.get)
-    if (optEndpoint.isDefined) dynamoClient.withEndpoint(optEndpoint.get)
-
-    log.info("DynamoDB client configured with:")
-    optRegion.foreach(region => log.info(s"AWS Region: ${region.toString.toLowerCase}"))
-    optEndpoint.foreach(endpoint => log.info(s"Endpoint: $endpoint"))
-    optAccessKey.foreach(_ => log.info("AWS Access Key ID has been provided"))
-    optSecretKey.foreach(_ => log.info("AWS Secret Access Key has been provided"))
-
-    dynamoClient
-  }
-}

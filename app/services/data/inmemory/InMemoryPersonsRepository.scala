@@ -1,8 +1,9 @@
-package services.data
+package services.data.inmemory
 
 import java.util.UUID
 
 import models.domain.Person
+import services.data.{PersonsRepository, RepositoryError}
 
 import scala.collection.parallel.mutable
 import scala.concurrent.Future
