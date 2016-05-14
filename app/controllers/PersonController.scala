@@ -3,7 +3,6 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.google.inject.Singleton
 import models.domain.{Person => PersonModel}
 import models.dto.ErrorResponse._
 import models.dto.Person._
@@ -15,7 +14,7 @@ import services.data._
 
 import scala.concurrent.Future
 
-@Singleton
+
 class PersonController @Inject()(persons: PersonsRepository) extends Controller {
   private val log = Logger(this.getClass)
 

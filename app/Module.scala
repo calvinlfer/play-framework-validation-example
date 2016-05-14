@@ -4,6 +4,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
 import com.google.inject.{AbstractModule, Inject, Provider}
+import controllers.PersonController
 import play.api.{Configuration, Environment, Logger}
 import services.data._
 
@@ -22,6 +23,8 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
   override def configure() = {
     // Use the system clock as the default implementation of Clock
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
+
+    bind(classOf[PersonController])
 
     bind(classOf[AmazonDynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
 
