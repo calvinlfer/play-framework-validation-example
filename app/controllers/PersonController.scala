@@ -51,7 +51,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
                               (completeFn: PersonModel => Future[Result]): Future[Result] =
     futureFindResult.flatMap {
       case Right(Some(person)) => completeFn(person)
-      case Right(None) => Future.successful(NotFound)
+      case Right(None) => Future.successful(NotFound(ErrorResponse("Resource not found", Map.empty).toJson))
       case Left(_) => Future.successful(ServiceError)
     }
 
@@ -75,7 +75,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
           val personModel: PersonModel = createPersonRequest.toModel
           onCreateHandleSuccess(persons.create(personModel)) {
             case CreateResult(SuccessfullyCreated, Some(person)) =>
-              Ok(person.toDTO.toJson)
+              Created(person.toDTO.toJson)
 
             case CreateResult(PersonAlreadyExists, None) =>
               Conflict(ErrorResponse("Person already exists", Map.empty).toJson)
@@ -86,7 +86,9 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
 
   def read(personId: UUID) = Action.async {
     log.info(s"GET /persons/$personId")
-    Future.successful(Ok)
+    onFindHandleSuccess(persons.find(personId)) {
+      person => Future.successful(Ok(person.toDTO.toJson))
+    }
   }
 
   def update(personId: UUID) = Action.async(parse.json) {
@@ -94,7 +96,7 @@ class PersonController @Inject()(persons: PersonsRepository) extends Controller 
       log.info(s"PUT /persons/$personId")
       onValidationHandleSuccess[UpdatePerson](request.body) {
         updatePersonRequest =>
-          onFindHandleSuccess(persons.read(personId)) {
+          onFindHandleSuccess(persons.find(personId)) {
             foundPerson => {
               val updatedPerson = updatePersonRequest.toModel(foundPerson)
               onUpdateHandleSuccess(persons.update(updatedPerson)) {

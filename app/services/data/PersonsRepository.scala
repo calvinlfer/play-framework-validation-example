@@ -30,7 +30,7 @@ case class CreateResult(status: CreateStatus, optPerson: Option[Person]) extends
 trait PersonsRepository {
   def create(person: Person): Future[Either[RepositoryError, CreateResult]]
 
-  def read(personId: UUID): Future[Either[RepositoryError, Option[Person]]]
+  def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]]
 
   def update(person: Person): Future[Either[RepositoryError, UpdateResult]]
 

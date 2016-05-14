@@ -1,7 +1,7 @@
 import java.util.UUID
 
-import models.domain.Gender.Gender
-import models.domain.Gender._
+import models.dto.Gender.Gender
+import models.dto.Gender._
 import models.dto.CreatePerson
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.play._
@@ -75,7 +75,7 @@ class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
     status(deleteResult) mustEqual OK
     contentType(deleteResult) mustEqual Some("application/json")
     val responseNode = Json.parse(contentAsString(deleteResult))
-    (responseNode \ "removedId").as[UUID] mustEqual uuid
+    (responseNode \ "id").as[UUID] mustEqual uuid
   }
 
   test("POST /persons with valid json followed by UPDATE /persons/{returned UUID from POST} updates a Person") {

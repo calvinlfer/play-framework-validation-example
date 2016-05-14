@@ -43,7 +43,7 @@ class InMemoryPersonsRepository extends PersonsRepository {
       }).getOrElse(Right(DeleteResult(DoesNotExist, personId)))
     }
 
-  override def read(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
+  override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
     Future {
       Right(store.get(personId))
     }

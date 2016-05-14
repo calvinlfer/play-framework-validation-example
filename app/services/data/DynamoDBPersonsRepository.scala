@@ -24,5 +24,5 @@ class DynamoDBPersonsRepository @Inject()(client: AmazonDynamoDBClient) extends 
 
   override def delete(personId: UUID): Future[Either[RepositoryError, DeleteResult]] = ???
 
-  override def read(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = ???
+  override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = ???
 }
