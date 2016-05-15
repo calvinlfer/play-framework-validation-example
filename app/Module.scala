@@ -1,4 +1,5 @@
 import java.time.Clock
+import javax.inject.Singleton
 
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
@@ -29,11 +30,13 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind(classOf[PersonController])
 
     bind(classOf[ExecutionContext])
-      .annotatedWith(Names.named("Repository")).toProvider(classOf[RepositoryExecutionContextProvider])
+      .annotatedWith(Names.named("Repository"))
+      .toProvider(classOf[RepositoryExecutionContextProvider])
+      .in(classOf[Singleton])
 
     bind(classOf[DynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
 
-    bind(classOf[PersonsRepository]).to(classOf[DynamoDBPersonsRepository]).asEagerSingleton()
+    bind(classOf[PersonsRepository]).to(classOf[DynamoDBPersonsRepository])
   }
 }
 
