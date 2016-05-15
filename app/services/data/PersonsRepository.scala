@@ -7,7 +7,7 @@ import models.domain.Person
 import scala.concurrent.Future
 
 sealed trait RepositoryError
-case class ConnectionError(message: String = "Placeholder") extends RepositoryError
+case object ConnectionError extends RepositoryError
 
 trait PersonsRepository {
   def create(person: Person): Future[Either[RepositoryError, Person]]

@@ -39,7 +39,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
     } catch {
       case e: Throwable =>
         log.error(s"Create $person failed", e)
-        Future.successful(Left(ConnectionError()))
+        Future.successful(Left(ConnectionError))
     }
 
 
@@ -62,7 +62,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
     } catch {
       case e: Throwable =>
         log.error(s"all failed", e)
-        Future.successful(Left(ConnectionError()))
+        Future.successful(Left(ConnectionError))
     }
 
   override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] =
@@ -73,7 +73,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
     } catch {
       case e: Throwable =>
         log.error(s"delete $personId failed", e)
-        Future.successful(Left(ConnectionError()))
+        Future.successful(Left(ConnectionError))
     }
 
   override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
@@ -85,7 +85,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
           optionXor.fold(Xor.right[RepositoryError, Option[Person]](None)) {
             case Xor.Left(dynamoReadError: DynamoReadError) =>
               log.info(describe(dynamoReadError))
-              Xor.left[RepositoryError, Option[Person]](ConnectionError())
+              Xor.left[RepositoryError, Option[Person]](ConnectionError)
 
             case Xor.Right(person: Person) => Xor.right[RepositoryError, Option[Person]](Some(person))
           }
@@ -95,6 +95,6 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
     } catch {
       case e: Throwable =>
         log.error(s"find failed", e)
-        Future.successful(Left(ConnectionError()))
+        Future.successful(Left(ConnectionError))
     }
 }
