@@ -59,7 +59,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
             Right(goodResults)
           })
       // The above assumes optimistic Future composition, here's how to handle the future itself failing
-      // Turns out I don't need this try catch on all blocks?
+      // So I don't need to try-catch on all operations?
       manipulatedResult.recover {
         case e: Throwable =>
           log.error("all: ", e)
