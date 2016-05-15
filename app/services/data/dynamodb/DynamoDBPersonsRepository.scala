@@ -57,6 +57,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
             case Xor.Left(dynamoReadError) => dynamoReadError
           }
 
+          // Each individual result has the potential to fail and so we capture this
           badResults.foreach((dynamoError: DynamoReadError) => log.error(s"all: ${describe(dynamoError)}"))
 
           val goodResults = listXor.collect {
