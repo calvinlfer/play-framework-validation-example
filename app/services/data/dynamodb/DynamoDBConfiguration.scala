@@ -3,13 +3,22 @@ package services.data.dynamodb
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
-import com.google.inject.{Inject, Provider}
+import javax.inject.{Inject, Provider}
+
+import akka.actor.ActorSystem
 import play.api.{Configuration, Logger}
+
+import scala.concurrent.ExecutionContext
 
 
 case class DynamoDBClient(underlyingClient: AmazonDynamoDBAsyncClient, prefixedTableName: String)
 
-class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Provider[DynamoDBClient] {
+/**
+  * Provides a fully configured Amazon Asynchronous DynamoDB client and table name to use in a DynamoDB repository.
+  * The information used to configure the client is retrieved from the application.conf HOCON file.
+  * @param configuration the Typesafe/Lightbend configuration library used to access HOCON files
+  */
+class DynamoDBClientProvider @Inject() (configuration: Configuration) extends Provider[DynamoDBClient] {
   private val log = Logger("DynamoDB configuration")
 
   override def get(): DynamoDBClient = {
@@ -47,4 +56,22 @@ class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Pro
 
     DynamoDBClient(underlyingClient = dynamoClient, optPrefixedTableName.getOrElse("defaulted-persons"))
   }
+}
+
+/**
+  * Provides a separate execution context meant to be used by a single data store to adhere to the bulkhead pattern.
+  * This execution context is retrieved from an Akka dispatcher that uses a fork-join executor thread pool by looking
+  * this information up in the application.conf HOCON
+  * @param system the Akka actor system from which a dispatcher is looked up and obtained
+  */
+class RepositoryExecutionContextProvider @Inject()(system: ActorSystem) extends Provider[ExecutionContext] {
+  private val log = Logger("Repository ExecutionContext Configuration")
+  private val result: ExecutionContext = {
+    // look up dispatcher by-name
+    val executor = system.dispatchers.lookup("repository-dispatcher")
+    log.info(s"Executor: ${executor.id} has been retrieved")
+    executor
+  }
+
+  override def get(): ExecutionContext = result
 }

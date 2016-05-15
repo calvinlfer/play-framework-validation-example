@@ -1,7 +1,7 @@
 package services.data.dynamodb
 
 import java.util.UUID
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 
 import cats.data.Xor
 import com.gu.scanamo.error.DynamoReadError._
@@ -13,7 +13,7 @@ import play.api.Logger
 import services.data.{ConnectionError, PersonsRepository, RepositoryError}
 import DynamoDBFormatHelpers._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 /**
@@ -22,15 +22,16 @@ import scala.language.postfixOps
   * or a zero-argument constructor that is not private
   *
   * @param client a fully configured Amazon DynamoDB client
+  * @param executionContext an execution context that allows Futures to execute (bulkhead pattern)
   */
-class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
-  extends PersonsRepository {
-
-  implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
+class DynamoDBPersonsRepository @Inject()
+(client: DynamoDBClient, @Named("Repository") executionContext: ExecutionContext) extends PersonsRepository {
 
   val log = Logger(this.getClass)
 
   val personsTable = Table[Person](client.prefixedTableName)
+
+  implicit val ec = executionContext
 
   private def captureAndFail[R](msg: String): PartialFunction[Throwable, Either[RepositoryError, R]] = {
     case t: Throwable =>
@@ -49,7 +50,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
   override def all: Future[Either[RepositoryError, Seq[Person]]] = {
     val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
     val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
-      // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
+    // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
       result
         .map(_.toList)
         .map(listXor => {

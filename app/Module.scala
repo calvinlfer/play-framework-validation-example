@@ -1,10 +1,14 @@
 import java.time.Clock
 
 import com.google.inject.AbstractModule
+import com.google.inject.name.Names
 import controllers.PersonController
 import play.api.{Configuration, Environment}
 import services.data._
-import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository}
+import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository, RepositoryExecutionContextProvider}
+
+import scala.concurrent.ExecutionContext
+
 
 /**
   * This class is a Guice module that tells Guice how to bind several
@@ -23,6 +27,9 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
 
     bind(classOf[PersonController])
+
+    bind(classOf[ExecutionContext])
+      .annotatedWith(Names.named("Repository")).toProvider(classOf[RepositoryExecutionContextProvider])
 
     bind(classOf[DynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
 
