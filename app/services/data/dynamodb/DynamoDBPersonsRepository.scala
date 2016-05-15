@@ -49,7 +49,7 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
   override def all: Future[Either[RepositoryError, Seq[Person]]] = {
     val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
     val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
-    // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
+      // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
       result
         .map(_.toList)
         .map(listXor => {
@@ -74,22 +74,25 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
   }
 
   override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = {
-      val findRequest = personsTable.get('id -> personId.toString)
-      val dynamoResult =
-        ScanamoAsync.exec(client.underlyingClient)(findRequest)
-      val xorManipulatedResult = dynamoResult.map(
-        (optionXor: Option[Xor[DynamoReadError, Person]]) =>
-          optionXor.fold(Xor.right[RepositoryError, Option[Person]](None)) {
-            case Xor.Left(dynamoReadError: DynamoReadError) =>
-              log.info(describe(dynamoReadError))
-              Xor.left[RepositoryError, Option[Person]](ConnectionError)
-
-            case Xor.Right(person: Person) =>
-              Xor.right[RepositoryError, Option[Person]](Some(person))
-          }
-      )
-      val finalResult: Future[Either[RepositoryError, Option[Person]]] =
-        xorManipulatedResult.map(_.toEither)
-      finalResult.recover(captureAndFail(s"Find person with ID: ${personId.toString} failed"))
-    }
+    val findRequest = personsTable.get('id -> personId.toString)
+    val dynamoResult = ScanamoAsync.exec(client.underlyingClient)(findRequest)
+    val xorManipulatedResult = dynamoResult.map(
+      (optionXor: Option[Xor[DynamoReadError, Person]]) =>
+        // If we get a None, it means that that person does not exist so we return a Right None
+        optionXor.fold(Xor.right[RepositoryError, Option[Person]](None)) {
+          // Deserialization from (DynamoDB => Scala) has the potential to fail so we capture this
+          xor =>
+            xor.fold(
+              dynamoReadError => {
+                log.info(describe(dynamoReadError))
+                Xor.left[RepositoryError, Option[Person]](ConnectionError)
+              },
+              (person: Person) =>
+                Xor.right[RepositoryError, Option[Person]](Some(person))
+            )
+        }
+    )
+    val finalResult: Future[Either[RepositoryError, Option[Person]]] = xorManipulatedResult.map(_.toEither)
+    finalResult.recover(captureAndFail(s"Find person with ID: ${personId.toString} failed"))
+  }
 }
