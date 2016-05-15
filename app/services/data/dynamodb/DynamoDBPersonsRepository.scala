@@ -23,7 +23,8 @@ import scala.language.postfixOps
   *
   * @param client a fully configured Amazon DynamoDB client
   */
-class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends PersonsRepository {
+class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient)
+  extends PersonsRepository {
 
   implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -31,61 +32,51 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
 
   val personsTable = Table[Person](client.prefixedTableName)
 
-  override def create(person: Person): Future[Either[RepositoryError, Person]] =
-    try {
-      val putRequest = personsTable.put(person)
-      val result = ScanamoAsync.exec(client.underlyingClient)(putRequest)
-      result.map(_ => Right(person))
-    } catch {
-      case e: Throwable =>
-        log.error(s"Create $person failed", e)
-        Future.successful(Left(ConnectionError))
-    }
+  private def captureAndFail[R](msg: String): PartialFunction[Throwable, Either[RepositoryError, R]] = {
+    case t: Throwable =>
+      log.error(msg, t)
+      Left[RepositoryError, R](ConnectionError)
+  }
 
+  override def create(person: Person): Future[Either[RepositoryError, Person]] = {
+    val putRequest = personsTable.put(person)
+    val result = ScanamoAsync.exec(client.underlyingClient)(putRequest)
+    result.map(_ => Right(person)).recover(captureAndFail[Person]("Create Person failed"))
+  }
 
   override def update(person: Person): Future[Either[RepositoryError, Person]] = create(person)
 
-  override def all: Future[Either[RepositoryError, Seq[Person]]] =
-    try {
-      val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
-      val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
-      // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
-        result.map(_.toList)
-          .map(listXor => {
-            val badResults = listXor.collect { case Xor.Left(dynamoReadError) => dynamoReadError }
-            badResults.foreach((dynamoError: DynamoReadError) => log.error(s"all: ${describe(dynamoError)}"))
+  override def all: Future[Either[RepositoryError, Seq[Person]]] = {
+    val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
+    val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
+    // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
+      result
+        .map(_.toList)
+        .map(listXor => {
+          val badResults = listXor.collect {
+            case Xor.Left(dynamoReadError) => dynamoReadError
+          }
 
-            val goodResults = listXor.collect { case Xor.Right(person) => person }
-            Right(goodResults)
-          })
-      // The above assumes optimistic Future composition, here's how to handle the future itself failing
-      // So I don't need to try-catch on all operations?
-      manipulatedResult.recover {
-        case e: Throwable =>
-          log.error("all: ", e)
-          Left(ConnectionError)
-      }
-    } catch {
-      case e: Throwable =>
-        log.error(s"all failed", e)
-        Future.successful(Left(ConnectionError))
-    }
+          badResults.foreach((dynamoError: DynamoReadError) => log.error(s"all: ${describe(dynamoError)}"))
 
-  override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] =
-    try {
-      val deleteRequest = personsTable.delete('id -> personId.toString)
-      val result = ScanamoAsync.exec(client.underlyingClient)(deleteRequest)
-      result.map(_ => Right(personId))
-    } catch {
-      case e: Throwable =>
-        log.error(s"delete $personId failed", e)
-        Future.successful(Left(ConnectionError))
-    }
+          val goodResults = listXor.collect {
+            case Xor.Right(person) => person
+          }
+          Right(goodResults)
+        })
+    manipulatedResult.recover(captureAndFail("Retrieve (all) persons failed"))
+  }
 
-  override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] =
-    try {
+  override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] = {
+    val deleteRequest = personsTable.delete('id -> personId.toString)
+    val result = ScanamoAsync.exec(client.underlyingClient)(deleteRequest)
+    result.map(_ => Right(personId)).recover(captureAndFail(s"Delete person with ID: ${personId.toString} failed"))
+  }
+
+  override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = {
       val findRequest = personsTable.get('id -> personId.toString)
-      val dynamoResult = ScanamoAsync.exec(client.underlyingClient)(findRequest)
+      val dynamoResult =
+        ScanamoAsync.exec(client.underlyingClient)(findRequest)
       val xorManipulatedResult = dynamoResult.map(
         (optionXor: Option[Xor[DynamoReadError, Person]]) =>
           optionXor.fold(Xor.right[RepositoryError, Option[Person]](None)) {
@@ -93,14 +84,12 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
               log.info(describe(dynamoReadError))
               Xor.left[RepositoryError, Option[Person]](ConnectionError)
 
-            case Xor.Right(person: Person) => Xor.right[RepositoryError, Option[Person]](Some(person))
+            case Xor.Right(person: Person) =>
+              Xor.right[RepositoryError, Option[Person]](Some(person))
           }
       )
-      val finalResult: Future[Either[RepositoryError, Option[Person]]] = xorManipulatedResult.map(_.toEither)
-      finalResult
-    } catch {
-      case e: Throwable =>
-        log.error(s"find failed", e)
-        Future.successful(Left(ConnectionError))
+      val finalResult: Future[Either[RepositoryError, Option[Person]]] =
+        xorManipulatedResult.map(_.toEither)
+      finalResult.recover(captureAndFail(s"Find person with ID: ${personId.toString} failed"))
     }
 }
