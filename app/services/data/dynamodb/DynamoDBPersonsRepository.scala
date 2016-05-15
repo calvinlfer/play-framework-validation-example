@@ -49,16 +49,22 @@ class DynamoDBPersonsRepository @Inject()(client: DynamoDBClient) extends Person
     try {
       val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
       val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
-        // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
+      // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
         result.map(_.toList)
-              .map(listXor => {
-                val badResults = listXor.collect { case Xor.Left(dynamoReadError) => dynamoReadError }
-                badResults.foreach((dynamoError: DynamoReadError) => log.error(s"all: ${describe(dynamoError)}"))
+          .map(listXor => {
+            val badResults = listXor.collect { case Xor.Left(dynamoReadError) => dynamoReadError }
+            badResults.foreach((dynamoError: DynamoReadError) => log.error(s"all: ${describe(dynamoError)}"))
 
-                val goodResults = listXor.collect { case Xor.Right(person) => person }
-                Right(goodResults)
-              })
-      manipulatedResult
+            val goodResults = listXor.collect { case Xor.Right(person) => person }
+            Right(goodResults)
+          })
+      // The above assumes optimistic Future composition, here's how to handle the future itself failing
+      // Turns out I don't need this try catch on all blocks?
+      manipulatedResult.recover {
+        case e: Throwable =>
+          log.error("all: ", e)
+          Left(ConnectionError)
+      }
     } catch {
       case e: Throwable =>
         log.error(s"all failed", e)
