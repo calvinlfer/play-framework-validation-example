@@ -3,7 +3,7 @@ package services.data.dynamodb
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
-import com.google.inject.{Inject, Provider}
+import javax.inject.{Inject, Provider}
 import play.api.{Configuration, Logger}
 
 
