@@ -2,12 +2,12 @@ package services.data.dynamodb
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.google.inject.{Inject, Provider}
 import play.api.{Configuration, Logger}
 
 
-case class DynamoDBClient(underlyingClient: AmazonDynamoDBClient, prefixedTableName: String)
+case class DynamoDBClient(underlyingClient: AmazonDynamoDBAsyncClient, prefixedTableName: String)
 
 class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Provider[DynamoDBClient] {
   private val log = Logger("DynamoDB configuration")
@@ -21,12 +21,12 @@ class DynamoDBClientProvider @Inject()(configuration: Configuration) extends Pro
     val optTableNamePrefix = configuration.getString("dynamodb.table-name-prefix")
 
     // Dear God, please forgive me for horrible mutation
-    val dynamoClient: AmazonDynamoDBClient =
+    val dynamoClient: AmazonDynamoDBAsyncClient =
       if (optAccessKey.isDefined && optSecretKey.isDefined) {
-        new AmazonDynamoDBClient(new BasicAWSCredentials(optAccessKey.get, optSecretKey.get))
+        new AmazonDynamoDBAsyncClient(new BasicAWSCredentials(optAccessKey.get, optSecretKey.get))
       }
       else {
-        new AmazonDynamoDBClient()
+        new AmazonDynamoDBAsyncClient()
       }
 
     if (optRegion.isDefined) dynamoClient.withRegion(optRegion.get)
