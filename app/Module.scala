@@ -1,11 +1,8 @@
 import java.time.Clock
 
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
-import com.google.inject.{AbstractModule, Inject, Provider}
+import com.google.inject.AbstractModule
 import controllers.PersonController
-import play.api.{Configuration, Environment, Logger}
+import play.api.{Configuration, Environment}
 import services.data._
 import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository}
 
