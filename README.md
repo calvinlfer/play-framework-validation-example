@@ -5,6 +5,8 @@ This example covers how to serialize `Scala => JSON` and deserialize `JSON => Sc
 using hand-rolled methods without the use of in built helpers (see the *More Information* section for that)
 
 [![Build Status](https://travis-ci.org/referentiallytransparent/play-framework-validation-example.svg?branch=master)](https://travis-ci.org/referentiallytransparent/play-framework-validation-example)
+[![codecov](https://codecov.io/gh/referentiallytransparent/play-framework-validation-example/branch/master/graph/badge.svg)](https://codecov.io/gh/referentiallytransparent/play-framework-validation-example)
+
 
 Controllers
 ===========
