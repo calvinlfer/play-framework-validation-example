@@ -4,7 +4,7 @@ Example Play application to demonstrate better validation
 This example covers how to serialize `Scala => JSON` and deserialize `JSON => Scala` in addition to performing validation
 using hand-rolled methods without the use of in built helpers (see the *More Information* section for that)
 
-[![Build Status](https://travis-ci.org/referentiallytransparent/play-framework-validation-example.svg?branch=master)](https://travis-ci.org/referentiallytransparent/play-framework-validation-example)
+[![Build Status](https://travis-ci.org/calvinlfer/play-framework-validation-example.svg?branch=master)](https://travis-ci.org/calvinlfer/play-framework-validation-example)
 
 Controllers
 ===========
