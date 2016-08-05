@@ -4,6 +4,7 @@ import javax.inject.Singleton
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import controllers.PersonController
+import net.codingwell.scalaguice.ScalaModule
 import play.api.{Configuration, Environment}
 import services.data._
 import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository, RepositoryExecutionContextProvider}
@@ -21,22 +22,22 @@ import scala.concurrent.ExecutionContext
   * adding `play.modules.enabled` settings to the `application.conf`
   * configuration file.
   */
-class Module(environment: Environment, configuration: Configuration) extends AbstractModule {
+class Module(environment: Environment, configuration: Configuration) extends AbstractModule with ScalaModule {
 
   override def configure(): Unit = {
     // Use the system clock as the default implementation of Clock
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
+    bind[Clock].toInstance(Clock.systemDefaultZone)
 
-    bind(classOf[PersonController])
+    bind[PersonController]
 
-    bind(classOf[ExecutionContext])
+    bind[ExecutionContext]
       .annotatedWith(Names.named("Repository"))
-      .toProvider(classOf[RepositoryExecutionContextProvider])
-      .in(classOf[Singleton])
+      .toProvider[RepositoryExecutionContextProvider]
+      .in[Singleton]
 
-    bind(classOf[DynamoDBClient]).toProvider(classOf[DynamoDBClientProvider])
+    bind[DynamoDBClient].toProvider[DynamoDBClientProvider]
 
-    bind(classOf[PersonsRepository]).to(classOf[DynamoDBPersonsRepository])
+    bind[PersonsRepository].to[DynamoDBPersonsRepository]
   }
 }
 
