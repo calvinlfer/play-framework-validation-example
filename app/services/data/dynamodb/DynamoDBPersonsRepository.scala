@@ -10,7 +10,7 @@ import com.gu.scanamo.syntax._
 import com.gu.scanamo.{ScanamoAsync, Table}
 import models.domain.Person
 import play.api.Logger
-import services.data.{ConnectionError, PersonsRepository, RepositoryError}
+import services.data.{ConnectionError, DeserializationError, PersonsRepository, RepositoryError}
 import DynamoDBFormatHelpers._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -87,7 +87,7 @@ class DynamoDBPersonsRepository @Inject()
             xor.fold(
               dynamoReadError => {
                 log.info(describe(dynamoReadError))
-                Xor.left[RepositoryError, Option[Person]](ConnectionError)
+                Xor.left[RepositoryError, Option[Person]](DeserializationError)
               },
               (person: Person) =>
                 Xor.right[RepositoryError, Option[Person]](Some(person))

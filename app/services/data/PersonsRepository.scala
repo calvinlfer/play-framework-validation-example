@@ -8,6 +8,7 @@ import scala.concurrent.Future
 
 sealed trait RepositoryError
 case object ConnectionError extends RepositoryError
+case object DeserializationError extends RepositoryError
 
 trait PersonsRepository {
   def create(person: Person): Future[Either[RepositoryError, Person]]
