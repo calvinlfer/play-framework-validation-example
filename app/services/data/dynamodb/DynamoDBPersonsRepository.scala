@@ -86,7 +86,7 @@ class DynamoDBPersonsRepository @Inject()
           xor =>
             xor.fold(
               dynamoReadError => {
-                log.info(describe(dynamoReadError))
+                log.info(s"Deserialization Error: ${describe(dynamoReadError)}")
                 Xor.left[RepositoryError, Option[Person]](DeserializationError)
               },
               (person: Person) =>

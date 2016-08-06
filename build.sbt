@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   ws,
   "com.gu"                 %% "scanamo"            % "0.6.0",
   "net.codingwell"         %% "scala-guice"        % "4.0.1",
+  "me.chrons"              %% "boopickle"          % "1.2.4",
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test
 )
 
