@@ -35,9 +35,9 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
       .toProvider[RepositoryExecutionContextProvider]
       .in[Singleton]
 
-    bind[DynamoDBClient].toProvider[DynamoDBClientProvider]
+    bind[DynamoDBClient].toProvider[DynamoDBClientProvider].in[Singleton]
 
-    bind[PersonsRepository].to[DynamoDBPersonsRepository]
+    bind[PersonsRepository].to[DynamoDBPersonsRepository].in[Singleton]
   }
 }
 

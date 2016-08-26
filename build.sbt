@@ -22,3 +22,11 @@ lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 compileScalastyle := org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
 
 (compile in Compile) <<= (compile in Compile) dependsOn compileScalastyle
+
+// DynamoDB Local
+dynamoDBLocalDownloadDir := file("dynamodb-local")
+dynamoDBLocalPort := 8000
+dynamoDBLocalSharedDB := true
+startDynamoDBLocal <<= startDynamoDBLocal.dependsOn(compile in Test)
+test in Test <<= (test in Test).dependsOn(startDynamoDBLocal)
+testOptions in Test <+= dynamoDBLocalTestCleanup

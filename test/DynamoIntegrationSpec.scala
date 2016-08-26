@@ -1,23 +1,22 @@
 import java.util.UUID
 
-import models.dto.Gender.Gender
-import models.dto.Gender._
 import models.dto.CreatePerson
+import models.dto.Gender.{Gender, _}
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatestplus.play._
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import services.data.inmemory.InMemoryPersonsRepository
 import services.data.PersonsRepository
 import services.data.dynamodb.DynamoDBPersonsRepository
+import services.data.inmemory.InMemoryPersonsRepository
 
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 
-class IntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
+class DynamoIntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   val application = new GuiceApplicationBuilder()
     .disable[DynamoDBPersonsRepository]
     .overrides(bind[PersonsRepository].to[InMemoryPersonsRepository])
