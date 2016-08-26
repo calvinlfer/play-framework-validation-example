@@ -1,4 +1,4 @@
-package services.data.dynamodb
+package database.dynamodb
 
 import java.util.UUID
 

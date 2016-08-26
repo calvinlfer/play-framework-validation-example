@@ -3,11 +3,13 @@ import javax.inject.Singleton
 
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
+import config.GuiceConfig
 import controllers.PersonController
+import database.PersonsRepository
+import database.dynamodb
+import database.dynamodb.{DynamoDBClient, DynamoDBClientProvider}
 import net.codingwell.scalaguice.ScalaModule
 import play.api.{Configuration, Environment}
-import services.data._
-import services.data.dynamodb.{DynamoDBClient, DynamoDBClientProvider, DynamoDBPersonsRepository, RepositoryExecutionContextProvider}
 
 import scala.concurrent.ExecutionContext
 
@@ -31,13 +33,13 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind[PersonController]
 
     bind[ExecutionContext]
-      .annotatedWith(Names.named("Repository"))
-      .toProvider[RepositoryExecutionContextProvider]
+      .annotatedWith(Names.named(GuiceConfig.DynamoRepository))
+      .toProvider[dynamodb.RepositoryExecutionContextProvider]
       .in[Singleton]
 
     bind[DynamoDBClient].toProvider[DynamoDBClientProvider].in[Singleton]
 
-    bind[PersonsRepository].to[DynamoDBPersonsRepository].in[Singleton]
+    bind[PersonsRepository].to[dynamodb.PersonsRepositoryImpl].in[Singleton]
   }
 }
 

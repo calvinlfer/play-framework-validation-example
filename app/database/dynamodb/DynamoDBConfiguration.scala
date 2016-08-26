@@ -1,4 +1,4 @@
-package services.data.dynamodb
+package database.dynamodb
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.Regions

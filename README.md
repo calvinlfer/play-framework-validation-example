@@ -33,3 +33,5 @@ More Information
 
 - See [ScalaJsonCombinators](https://www.playframework.com/documentation/2.5.x/ScalaJsonCombinators) which cover using validation helpers
   - More specifically [Validation with Reads](https://www.playframework.com/documentation/2.5.x/ScalaJsonCombinators#Validation-with-Reads)
+
+- The SBT DynamoDB plugin only works on Unix based operating systems

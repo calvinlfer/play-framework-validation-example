@@ -1,4 +1,4 @@
-package services.data.dynamodb
+package database.dynamodb
 
 import java.util.UUID
 import javax.inject.{Inject, Named}
@@ -8,10 +8,11 @@ import com.gu.scanamo.error.DynamoReadError._
 import com.gu.scanamo.error._
 import com.gu.scanamo.syntax._
 import com.gu.scanamo.{ScanamoAsync, Table}
+import config.GuiceConfig
+import database.{ConnectionError, DeserializationError, PersonsRepository, RepositoryError}
+import DynamoDBFormatHelpers._
 import models.domain.Person
 import play.api.Logger
-import services.data.{ConnectionError, DeserializationError, PersonsRepository, RepositoryError}
-import DynamoDBFormatHelpers._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -24,8 +25,8 @@ import scala.language.postfixOps
   * @param client a fully configured Amazon DynamoDB client
   * @param executionContext an execution context that allows Futures to execute (bulkhead pattern)
   */
-class DynamoDBPersonsRepository @Inject()
-(client: DynamoDBClient, @Named("Repository") executionContext: ExecutionContext) extends PersonsRepository {
+class PersonsRepositoryImpl @Inject()
+(client: DynamoDBClient, @Named(GuiceConfig.DynamoRepository) executionContext: ExecutionContext) extends PersonsRepository {
 
   val log = Logger(this.getClass)
 

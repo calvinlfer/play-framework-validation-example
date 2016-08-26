@@ -1,5 +1,6 @@
 import java.util.UUID
 
+import database.{PersonsRepository, dynamodb, inmemory}
 import models.dto.CreatePerson
 import models.dto.Gender.{Gender, _}
 import org.scalatest.{FunSuite, MustMatchers}
@@ -9,17 +10,14 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import services.data.PersonsRepository
-import services.data.dynamodb.DynamoDBPersonsRepository
-import services.data.inmemory.InMemoryPersonsRepository
 
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 
 class DynamoIntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   val application = new GuiceApplicationBuilder()
-    .disable[DynamoDBPersonsRepository]
-    .overrides(bind[PersonsRepository].to[InMemoryPersonsRepository])
+    .disable[dynamodb.PersonsRepositoryImpl]
+    .overrides(bind[PersonsRepository].to[inmemory.PersonsRepositoryImpl])
     .build
 
   implicit val ec = globalExecutionContext

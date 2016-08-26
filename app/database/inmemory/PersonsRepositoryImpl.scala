@@ -1,15 +1,15 @@
-package services.data.inmemory
+package database.inmemory
 
 import java.util.UUID
 
+import database.{PersonsRepository, RepositoryError}
 import models.domain.Person
-import services.data.{PersonsRepository, RepositoryError}
 
 import scala.collection.parallel.mutable
 import scala.concurrent.Future
 
 
-class InMemoryPersonsRepository extends PersonsRepository {
+class PersonsRepositoryImpl extends PersonsRepository {
   private val store = mutable.ParTrieMap.empty[UUID, Person]
   private implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
 

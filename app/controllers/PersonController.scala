@@ -3,6 +3,7 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
+import database.{PersonsRepository, RepositoryError}
 import models.domain.{Person => PersonModel}
 import models.dto.ErrorResponse._
 import models.dto.Person._
@@ -10,8 +11,6 @@ import models.dto.{CreatePerson, ErrorResponse, UpdatePerson}
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Controller, Result}
-import services.data._
-
 import scala.concurrent.Future
 
 
