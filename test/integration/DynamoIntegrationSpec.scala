@@ -18,7 +18,11 @@ import DynamoIntegrationSpec._
 
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
-
+/**
+  * An example of a DynamoDB integration test. This must be run in conjunction with local DynamoDB. The easiest way to
+  * run this is via `activator test` or `sbt test` which uses Localytics' sbt-dynamodb to spawn a local version of
+  * DynamoDB on port 8000 right before all the tests run and perform cleanup right after.
+  */
 class DynamoIntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   val application = new GuiceApplicationBuilder().build
 
