@@ -29,7 +29,11 @@ import scala.language.postfixOps
 class PersonsRepositoryImpl @Inject()(config: Configuration, client: AmazonDynamoDBAsyncClient,
                                       @Named(Guice.DynamoRepository) executionContext: ExecutionContext) extends PersonsRepository {
   val log = Logger(this.getClass)
-  val tableName = DynamoDB.Settings(config).tableName.getOrElse("local-members-table")
+  lazy val tableName = {
+    val result = DynamoDB.Settings(config).tableName.getOrElse("local-members-table")
+    log.info(s"Table: $result")
+    result
+  }
   val personsTable = Table[Person](tableName)
 
   implicit val ec = executionContext
