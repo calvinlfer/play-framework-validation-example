@@ -1,7 +1,8 @@
+package integration
+
 import java.util.UUID
 
-import database.{PersonsRepository, dynamodb}
-import database.inmemory
+import database.{PersonsRepository, dynamodb, inmemory}
 import models.dto.CreatePerson
 import models.dto.Gender.{Gender, _}
 import org.scalatest.{FunSuite, MustMatchers}
@@ -15,7 +16,7 @@ import play.api.test._
 import scala.concurrent.ExecutionContext.{global => globalExecutionContext}
 
 
-class InMemoryIntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
+class DynamoIntegrationSpec extends FunSuite with MustMatchers with OneAppPerTest {
   val application = new GuiceApplicationBuilder()
     .disable[dynamodb.PersonsRepositoryImpl]
     .overrides(bind[PersonsRepository].to[inmemory.PersonsRepositoryImpl])

@@ -1,3 +1,5 @@
+package unit
+
 import models.dto.Gender
 import models.dto.Gender.Gender
 import org.scalatest.{FunSuite, MustMatchers}
