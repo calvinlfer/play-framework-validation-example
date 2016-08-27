@@ -1,13 +1,14 @@
 import java.time.Clock
 import javax.inject.Singleton
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import config.GuiceConfig
+import config.Guice
 import controllers.PersonController
 import database.PersonsRepository
 import database.dynamodb
-import database.dynamodb.{DynamoDBClient, DynamoDBClientProvider}
+import database.dynamodb.DynamoDBClientProvider
 import net.codingwell.scalaguice.ScalaModule
 import play.api.{Configuration, Environment}
 
@@ -33,11 +34,11 @@ class Module(environment: Environment, configuration: Configuration) extends Abs
     bind[PersonController]
 
     bind[ExecutionContext]
-      .annotatedWith(Names.named(GuiceConfig.DynamoRepository))
+      .annotatedWith(Names.named(Guice.DynamoRepository))
       .toProvider[dynamodb.RepositoryExecutionContextProvider]
       .in[Singleton]
 
-    bind[DynamoDBClient].toProvider[DynamoDBClientProvider].in[Singleton]
+    bind[AmazonDynamoDBAsyncClient].toProvider[DynamoDBClientProvider].in[Singleton]
 
     bind[PersonsRepository].to[dynamodb.PersonsRepositoryImpl].in[Singleton]
   }

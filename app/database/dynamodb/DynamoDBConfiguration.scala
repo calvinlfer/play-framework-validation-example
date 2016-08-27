@@ -10,26 +10,20 @@ import play.api.{Configuration, Logger}
 
 import scala.concurrent.ExecutionContext
 
-
-case class DynamoDBClient(underlyingClient: AmazonDynamoDBAsyncClient, prefixedTableName: String)
-
 /**
   * Provides a fully configured Amazon Asynchronous DynamoDB client and table name to use in a DynamoDB repository.
   * The information used to configure the client is retrieved from the application.conf HOCON file.
   * @param configuration the Typesafe/Lightbend configuration library used to access HOCON files
   */
-class DynamoDBClientProvider @Inject() (configuration: Configuration) extends Provider[DynamoDBClient] {
+class DynamoDBClientProvider @Inject() (configuration: Configuration) extends Provider[AmazonDynamoDBAsyncClient] {
   private val log = Logger("DynamoDB configuration")
 
-  override def get(): DynamoDBClient = {
+  override def get(): AmazonDynamoDBAsyncClient = {
     val optEndpoint = configuration.getString("dynamodb.endpoint")
     val optAccessKey = configuration.getString("dynamodb.aws-access-key-id")
     val optSecretKey = configuration.getString("dynamodb.aws-secret-access-key")
     val optRegion = configuration.getString("dynamodb.region").map(r => Regions.fromName(r))
-    val optTableName = configuration.getString("dynamodb.table-name")
-    val optTableNamePrefix = configuration.getString("dynamodb.table-name-prefix")
 
-    // Dear God, please forgive me for horrible mutation
     val dynamoClient: AmazonDynamoDBAsyncClient =
       if (optAccessKey.isDefined && optSecretKey.isDefined) {
         new AmazonDynamoDBAsyncClient(new BasicAWSCredentials(optAccessKey.get, optSecretKey.get))
@@ -41,20 +35,22 @@ class DynamoDBClientProvider @Inject() (configuration: Configuration) extends Pr
     if (optRegion.isDefined) dynamoClient.withRegion(optRegion.get)
     if (optEndpoint.isDefined) dynamoClient.withEndpoint(optEndpoint.get)
 
-    val optPrefixedTableName = for {
-      tableNamePrefix <- optTableNamePrefix
-      tableName <- optTableName
-    } yield s"$tableNamePrefix-$tableName"
 
-    log.info("DynamoDB client configured with:")
+    for {
+      region    <- optRegion
+      endpoint  <- optEndpoint
+      ak        <- optAccessKey
+      sk        <- optSecretKey
+    } log.warn("Region + Endpoint + Access Key + Secret Key is provided - using endpoints + keys")
+
+    // WARNING: Note that if (Region) and (Access Keys + Endpoint) are set then the latter overrides
+    log.info("DynamoDB client configuration:")
     optRegion.foreach(region => log.info(s"AWS Region: ${region.toString.toLowerCase}"))
     optEndpoint.foreach(endpoint => log.info(s"Endpoint: $endpoint"))
     optAccessKey.foreach(_ => log.info("AWS Access Key ID has been provided"))
     optSecretKey.foreach(_ => log.info("AWS Secret Access Key has been provided"))
-    optTableNamePrefix.foreach(prefix => log.info(s"Table prefix has been set to $prefix"))
-    optTableName.foreach(tableName => log.info(s"Table name has been set to $tableName"))
 
-    DynamoDBClient(underlyingClient = dynamoClient, optPrefixedTableName.getOrElse("defaulted-persons"))
+    dynamoClient
   }
 }
 

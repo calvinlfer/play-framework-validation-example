@@ -4,15 +4,16 @@ import java.util.UUID
 import javax.inject.{Inject, Named}
 
 import cats.data.Xor
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.gu.scanamo.error.DynamoReadError._
 import com.gu.scanamo.error._
 import com.gu.scanamo.syntax._
 import com.gu.scanamo.{ScanamoAsync, Table}
-import config.GuiceConfig
-import database.{ConnectionError, DeserializationError, PersonsRepository, RepositoryError}
 import DynamoDBFormatHelpers._
+import config.{DynamoDB, Guice}
+import database.{ConnectionError, DeserializationError, PersonsRepository, RepositoryError}
 import models.domain.Person
-import play.api.Logger
+import play.api.{Configuration, Logger}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -22,15 +23,14 @@ import scala.language.postfixOps
   * classes must have either one (and only one) constructor annotated with @Inject
   * or a zero-argument constructor that is not private
   *
-  * @param client a fully configured Amazon DynamoDB client
+  * @param client           a fully configured Amazon DynamoDB client
   * @param executionContext an execution context that allows Futures to execute (bulkhead pattern)
   */
-class PersonsRepositoryImpl @Inject()
-(client: DynamoDBClient, @Named(GuiceConfig.DynamoRepository) executionContext: ExecutionContext) extends PersonsRepository {
-
+class PersonsRepositoryImpl @Inject()(config: Configuration, client: AmazonDynamoDBAsyncClient,
+                                      @Named(Guice.DynamoRepository) executionContext: ExecutionContext) extends PersonsRepository {
   val log = Logger(this.getClass)
-
-  val personsTable = Table[Person](client.prefixedTableName)
+  val tableName = DynamoDB.Settings(config).tableName.getOrElse("local-members-table")
+  val personsTable = Table[Person](tableName)
 
   implicit val ec = executionContext
 
@@ -42,14 +42,14 @@ class PersonsRepositoryImpl @Inject()
 
   override def create(person: Person): Future[Either[RepositoryError, Person]] = {
     val putRequest = personsTable.put(person)
-    val result = ScanamoAsync.exec(client.underlyingClient)(putRequest)
+    val result = ScanamoAsync.exec(client)(putRequest)
     result.map(_ => Right(person)).recover(captureAndFail[Person]("Create Person failed"))
   }
 
   override def update(person: Person): Future[Either[RepositoryError, Person]] = create(person)
 
   override def all: Future[Either[RepositoryError, Seq[Person]]] = {
-    val result = ScanamoAsync.scan[Person](client.underlyingClient)(client.prefixedTableName)
+    val result = ScanamoAsync.scan[Person](client)(tableName)
     val manipulatedResult: Future[Either[RepositoryError, Seq[Person]]] =
     // non-strict => strict (this will cause all the results to be pulled from DynamoDB)
       result
@@ -72,13 +72,13 @@ class PersonsRepositoryImpl @Inject()
 
   override def delete(personId: UUID): Future[Either[RepositoryError, UUID]] = {
     val deleteRequest = personsTable.delete('id -> personId.toString)
-    val result = ScanamoAsync.exec(client.underlyingClient)(deleteRequest)
+    val result = ScanamoAsync.exec(client)(deleteRequest)
     result.map(_ => Right(personId)).recover(captureAndFail(s"Delete person with ID: ${personId.toString} failed"))
   }
 
   override def find(personId: UUID): Future[Either[RepositoryError, Option[Person]]] = {
     val findRequest = personsTable.get('id -> personId.toString)
-    val dynamoResult = ScanamoAsync.exec(client.underlyingClient)(findRequest)
+    val dynamoResult = ScanamoAsync.exec(client)(findRequest)
     val xorManipulatedResult = dynamoResult.map(
       (optionXor: Option[Xor[DynamoReadError, Person]]) =>
         // If we get a None, it means that that person does not exist so we return a Right None
